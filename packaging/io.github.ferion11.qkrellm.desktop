@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=qkrellm
+GenericName=System Monitor
+Comment=Lightweight stacked system monitor
+Exec=qkrellm
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;Qt;
+Keywords=monitor;cpu;memory;network;sensors;

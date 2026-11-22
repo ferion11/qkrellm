@@ -1,0 +1,28 @@
+# Install once per clone:  pre-commit install
+# pre-commit keeps its own cache in ~/.cache/pre-commit (nothing is written to the repo).
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^tests/fixtures/proc/
+      - id: end-of-file-fixer
+        exclude: ^tests/fixtures/proc/
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=512]
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        entry: clang-format -i
+        language: system
+        types_or: [c, c++]
+      - id: no-in-source-build
+        name: no build artifacts in the repo
+        entry: "Build outputs must live in /tmp/qkrellm (use the CMake presets)"
+        language: fail
+        files: (^|/)(CMakeCache\.txt|CMakeFiles/|compile_commands\.json|build\.ninja)$

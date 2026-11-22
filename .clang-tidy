@@ -1,0 +1,44 @@
+# Run via scripts/lint.sh (uses a sanitised copy of /tmp/qkrellm/build/dev/compile_commands.json).
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  concurrency-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-owning-memory,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  performance-*,
+  portability-*,
+  -portability-avoid-pragma-once,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-function-cognitive-complexity,
+  -readability-redundant-access-specifiers,
+  -readability-convert-member-functions-to-static
+WarningsAsErrors: ''
+HeaderFilterRegex: '(src|include|tests|plugins)/.*'
+# Generated code (moc, configure_file) lives in /tmp/qkrellm/build: never lint it.
+ExcludeHeaderFilterRegex: '^/tmp/'
+FormatStyle: file
+CheckOptions:
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: k

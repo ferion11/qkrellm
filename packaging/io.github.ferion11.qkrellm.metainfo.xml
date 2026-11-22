@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ferion11.qkrellm</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>qkrellm</name>
+  <summary>Lightweight stacked system monitor</summary>
+  <description>
+    <p>qkrellm is a small, resource-frugal system monitor built with Qt 6, in the spirit of
+    GKrellM: a compact stack of charts and meters for CPU, memory, network, disks and
+    sensors, extensible through a stable C plugin API.</p>
+  </description>
+  <launchable type="desktop-id">io.github.ferion11.qkrellm.desktop</launchable>
+  <url type="homepage">https://github.com/ferion11/qkrellm</url>
+  <categories>
+    <category>System</category>
+    <category>Monitor</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-22" type="development"/>
+  </releases>
+</component>

@@ -1,0 +1,127 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "/tmp/qkrellm/build/${presetName}",
+      "installDir": "/tmp/qkrellm/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "dev",
+      "displayName": "Debug (warnings as errors)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "QKRELLM_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "dev-clang",
+      "displayName": "Debug with clang",
+      "inherits": "dev",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Size-optimised release with LTO",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+        "QKRELLM_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "Debug with ASan + UBSan",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "QKRELLM_ENABLE_SANITIZERS": "ON",
+        "QKRELLM_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Debug with gcov (use scripts/coverage.sh)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "QKRELLM_ENABLE_COVERAGE": "ON",
+        "QKRELLM_USE_CCACHE": "OFF"
+      }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "libFuzzer targets (clang)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "QKRELLM_ENABLE_FUZZ": "ON",
+        "QKRELLM_ENABLE_SANITIZERS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "dev-clang", "configurePreset": "dev-clang" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "asan", "configurePreset": "asan" },
+    { "name": "coverage", "configurePreset": "coverage" },
+    { "name": "fuzz", "configurePreset": "fuzz" }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": { "outputOnFailure": true },
+      "environment": { "QT_QPA_PLATFORM": "offscreen" },
+      "execution": { "noTestsAction": "error" }
+    },
+    { "name": "dev", "inherits": "base", "configurePreset": "dev" },
+    { "name": "dev-clang", "inherits": "base", "configurePreset": "dev-clang" },
+    { "name": "release", "inherits": "base", "configurePreset": "release" },
+    {
+      "name": "asan",
+      "inherits": "base",
+      "configurePreset": "asan",
+      "environment": {
+        "QT_QPA_PLATFORM": "offscreen",
+        "ASAN_OPTIONS": "detect_leaks=1:abort_on_error=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"
+      }
+    },
+    { "name": "coverage", "inherits": "base", "configurePreset": "coverage" }
+  ],
+  "workflowPresets": [
+    {
+      "name": "dev",
+      "steps": [
+        { "type": "configure", "name": "dev" },
+        { "type": "build", "name": "dev" },
+        { "type": "test", "name": "dev" }
+      ]
+    },
+    {
+      "name": "asan",
+      "steps": [
+        { "type": "configure", "name": "asan" },
+        { "type": "build", "name": "asan" },
+        { "type": "test", "name": "asan" }
+      ]
+    }
+  ]
+}

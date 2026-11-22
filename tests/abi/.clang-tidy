@@ -1,0 +1,10 @@
+# Plain-C ABI consumers: relax C++-only guidelines, keep bug-finding checks.
+InheritParentConfig: true
+Checks: >
+  -readability-identifier-naming,
+  -misc-use-internal-linkage,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -concurrency-mt-unsafe,
+  -clang-analyzer-optin.taint.GenericTaint,
+  -modernize-*,
+  -cppcoreguidelines-macro-usage

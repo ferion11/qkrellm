@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+*.svg text
+# Kernel snapshots must stay byte-exact.
+tests/fixtures/proc/** -text -diff linguist-generated

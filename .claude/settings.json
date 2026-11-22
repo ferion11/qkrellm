@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(cmake *)",
+      "Bash(ctest *)",
+      "Bash(ninja *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(clang-format *)",
+      "Bash(clang-tidy *)",
+      "Bash(readelf *)",
+      "Bash(scripts/lint.sh *)",
+      "Bash(scripts/coverage.sh *)",
+      "Bash(scripts/check-qt-modules.sh *)",
+      "Bash(benchmarks/measure.sh *)",
+      "Bash(tests/fixtures/capture.sh *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard_cmake.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post_edit.py",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ARCH_PACKAGES: base-devel cmake ninja git python qt6-base clang ccache
+
+jobs:
+  build-test:
+    name: ${{ matrix.preset }} (Arch, latest Qt)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [dev, dev-clang, asan]
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+      - uses: actions/checkout@v4
+      - name: Configure, build, test
+        run: |
+          cmake --preset ${{ matrix.preset }}
+          cmake --build --preset ${{ matrix.preset }}
+          ctest --preset ${{ matrix.preset }}
+      - name: Repository stays clean
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test -z "$(git status --porcelain)" || { git status; exit 1; }
+
+  min-qt:
+    name: dev (Ubuntu, Qt 6.5 minimum)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake g++ libgl-dev libxkbcommon-dev libfontconfig1 libegl1
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.3'
+          cache: true
+      - name: Configure, build, test
+        run: cmake --workflow --preset dev
+
+  lint:
+    name: lint (format, clang-tidy, clazy, cppcheck)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES clazy cppcheck
+      - uses: actions/checkout@v4
+      - name: Lint
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          scripts/lint.sh
+
+  budget:
+    name: resource budget (release)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+      - uses: actions/checkout@v4
+      - name: Build release
+        run: |
+          cmake --preset release
+          cmake --build --preset release
+          ctest --preset release
+      - name: Measure
+        env:
+          # Shared runners are noisy: only memory and CPU are strict in CI.
+          QK_BUDGET_STARTUP_MS: '1000'
+        run: benchmarks/measure.sh --check --seconds 10

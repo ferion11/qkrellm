@@ -1,0 +1,7 @@
+# clangd (and the Claude Code clangd LSP plugin) read the compile database from the
+# out-of-tree dev build. Run `cmake --preset dev` once (again after a reboot: /tmp is tmpfs).
+CompileFlags:
+  CompilationDatabase: /tmp/qkrellm/build/dev
+Diagnostics:
+  ClangTidy:
+    FastCheckFilter: Loose

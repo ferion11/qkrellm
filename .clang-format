@@ -1,0 +1,40 @@
+# qkrellm C/C++ style. Applied automatically by the Claude Code hook and pre-commit.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+IndentWidth: 4
+ColumnLimit: 100
+AccessModifierOffset: -4
+PointerAlignment: Left
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterFunction: true
+  AfterStruct: true
+  AfterEnum: false
+  AfterNamespace: false
+  SplitEmptyFunction: false
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BreakConstructorInitializers: BeforeComma
+FixNamespaceComments: true
+NamespaceIndentation: None
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<qkrellm/'
+    Priority: 3
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<Q'
+    Priority: 4
+  - Regex: '^<[a-z_]+>$'
+    Priority: 5
+  - Regex: '^<.*\.h>'
+    Priority: 6
+SortIncludes: CaseSensitive
+SpaceAfterTemplateKeyword: false
+---
+Language: Json
+DisableFormat: true

@@ -1,0 +1,15 @@
+name: Feature request
+description: Propose a monitor, option or plugin API capability
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you need and why?
+    validations:
+      required: true
+  - type: textarea
+    id: cost
+    attributes:
+      label: Resource cost
+      description: qkrellm has a strict resource budget (docs/resource-budget.md). Any new dependency or always-on work?
