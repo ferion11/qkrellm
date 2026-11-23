@@ -71,6 +71,42 @@ QStringView formatPercent(TextBuffer& buffer, std::optional<float> fraction)
     return view(buffer, n);
 }
 
+QStringView formatCelsius(TextBuffer& buffer, std::optional<float> celsius)
+{
+    constexpr float kLimit = 9999.0F; // keeps the text short whatever the sensor reports
+    std::size_t n = 0;
+    if (!celsius || std::isnan(*celsius)) {
+        buffer.at(n++) = u'-';
+        buffer.at(n++) = u'-';
+    } else {
+        const float clamped = std::clamp(*celsius, -kLimit, kLimit);
+        const long long whole = std::llround(clamped);
+        if (whole < 0) {
+            buffer.at(n++) = u'-';
+        }
+        appendUnsigned(buffer, n, whole < 0 ? -whole : whole);
+    }
+    buffer.at(n++) = u'\u00B0';
+    buffer.at(n++) = u'C';
+    return view(buffer, n);
+}
+
+QStringView formatRpm(TextBuffer& buffer, std::optional<float> rpm)
+{
+    constexpr float kLimit = 999999.0F;
+    std::size_t n = 0;
+    if (!rpm || std::isnan(*rpm)) {
+        buffer.at(n++) = u'-';
+        buffer.at(n++) = u'-';
+    } else {
+        appendUnsigned(buffer, n, std::llround(std::clamp(*rpm, 0.0F, kLimit)));
+    }
+    for (const char16_t c : {u'r', u'p', u'm'}) {
+        buffer.at(n++) = c;
+    }
+    return view(buffer, n);
+}
+
 QStringView formatBytes(TextBuffer& buffer, std::optional<double> bytes)
 {
     std::size_t n = 0;

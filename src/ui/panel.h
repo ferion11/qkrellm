@@ -19,6 +19,8 @@ class TextRenderer;
 /// How the header value (right side) is written.
 enum class ValueFormat : std::uint8_t {
     Percent, ///< Fraction metric -> "nn%"
+    Celsius, ///< temperature -> "54°C"
+    Rpm,     ///< fan speed -> "2400rpm"
     Bytes,   ///< Bytes metric -> "3.2G", or "3.2G/62G" with PanelSpec::totalMetric when it fits
 };
 
@@ -32,7 +34,8 @@ struct PanelSpec
     ValueFormat valueFormat = ValueFormat::Percent;
     std::optional<core::MetricHandle> totalMetric{}; ///< Bytes only: appended as "/total"
     std::vector<ChartSeries> series{};               ///< empty = header only
-    ChartScale chartScale = ChartScale::Fraction;
+    ChartScale chartScale = ChartScale::Fixed;
+    double chartMaximum = 1.0; ///< full height for ChartScale::Fixed
 };
 // NOLINTEND(readability-redundant-member-init)
 

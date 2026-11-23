@@ -28,13 +28,14 @@ double chartAutoScale(double maximum)
 }
 
 ChartWidget::ChartWidget(const core::MetricRegistry& registry, std::vector<ChartSeries> series,
-                         const Theme& theme, ChartScale scale, const TextRenderer* text,
-                         QWidget* parent)
+                         const Theme& theme, ChartScale scale, double fixedMaximum,
+                         const TextRenderer* text, QWidget* parent)
     : QWidget(parent)
     , m_registry(&registry)
     , m_series(std::move(series))
     , m_theme(&theme)
     , m_scale(scale)
+    , m_fixedMaximum(fixedMaximum > 0.0 ? fixedMaximum : 1.0)
     , m_text(text)
 {
     setAttribute(Qt::WA_OpaquePaintEvent);
@@ -72,7 +73,7 @@ void ChartWidget::paintEvent(QPaintEvent* /*event*/)
     }
     const auto columns = std::min(samples, static_cast<std::size_t>(std::max(w, 0)));
 
-    double scale = 1.0;
+    double scale = m_fixedMaximum;
     if (m_scale == ChartScale::Auto) {
         double maximum = 0.0;
         for (std::size_t k = 0; k < columns; ++k) {

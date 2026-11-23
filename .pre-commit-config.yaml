@@ -5,9 +5,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^(tests/fixtures/proc/|src/ui/fonts/LICENSE\.)
+        exclude: ^(tests/fixtures/(proc|sys)/|src/ui/fonts/LICENSE\.)
       - id: end-of-file-fixer
-        exclude: ^(tests/fixtures/proc/|src/ui/fonts/LICENSE\.)
+        exclude: ^(tests/fixtures/(proc|sys)/|src/ui/fonts/LICENSE\.)
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-json

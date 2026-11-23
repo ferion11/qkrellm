@@ -30,8 +30,8 @@ Panel::Panel(const core::MetricRegistry& registry, PanelSpec spec, const TextRen
     layout->setContentsMargins(0, headerHeight(), 0, 0);
     layout->setSpacing(0);
     if (!spec.series.empty()) {
-        m_chart =
-            new ChartWidget(registry, std::move(spec.series), theme, spec.chartScale, &text, this);
+        m_chart = new ChartWidget(registry, std::move(spec.series), theme, spec.chartScale,
+                                  spec.chartMaximum, &text, this);
         layout->addWidget(m_chart);
     }
 }
@@ -70,6 +70,12 @@ void Panel::paintEvent(QPaintEvent* /*event*/)
         switch (m_valueFormat) {
         case ValueFormat::Percent:
             value = formatPercent(buffer, latest(m_valueMetric));
+            break;
+        case ValueFormat::Celsius:
+            value = formatCelsius(buffer, latest(m_valueMetric));
+            break;
+        case ValueFormat::Rpm:
+            value = formatRpm(buffer, latest(m_valueMetric));
             break;
         case ValueFormat::Bytes:
             if (m_totalMetric) {

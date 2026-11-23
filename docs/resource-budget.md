@@ -57,6 +57,12 @@ History: `/tmp/qkrellm/bench/results.tsv` (date, commit, startup, private, pss, 
 | xcb, + Swap panel | 36 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 1 ‰ |
 | xcb, 70 px, + 2 network panels | 35 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 1 ‰ |
 | xcb, + Disk panel | 42 ms | 2.7 MiB | 12.7 MiB | 32 MiB | 1 ‰ |
+| xcb, + hwmon (Temp chart + 6 rows) | 47 ms | 2.7 MiB | 12.8 MiB | 32 MiB | 1 ‰ |
+
+hwmon read costs on the reference laptop (per read): coretemp ~5 µs CPU; acpitz ~55 µs;
+iwlwifi ~17 µs CPU / 150 µs wall; Asus WMI fans ~0.6 ms CPU; NVMe 3–15 ms wall
+(~0.1 ms CPU). Reading everything every second measured 4 ‰ CPU, hence the slow-sensor
+period in `HwmonMonitor`.
 
 M0 findings (before bitmap text):
 - ~41 MiB of RSS is file-backed and shared: libQt6Gui/Widgets/Core (~17 MiB),

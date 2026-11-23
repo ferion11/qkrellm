@@ -17,6 +17,7 @@ enum class MetricUnit : std::uint8_t {
     Bytes,
     BytesPerSecond,
     Celsius,
+    Rpm, ///< fan speed
 };
 
 struct MetricInfo

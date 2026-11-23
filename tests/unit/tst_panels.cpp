@@ -23,7 +23,9 @@ using qk::ui::ChartScale;
 using qk::ui::ChartWidget;
 using qk::ui::formatBytes;
 using qk::ui::formatBytesOf;
+using qk::ui::formatCelsius;
 using qk::ui::formatPercent;
+using qk::ui::formatRpm;
 using qk::ui::MainWindow;
 using qk::ui::TextBuffer;
 using qk::ui::Theme;
@@ -103,6 +105,39 @@ private slots:
         QCOMPARE(text(formatBytesOf(b, std::nullopt, 1024.0)), QStringLiteral("--/1.0K"));
     }
 
+    void formatsTemperatureAndFan()
+    {
+        TextBuffer b{};
+        QCOMPARE(text(formatCelsius(b, 54.4F)), QStringLiteral("54\u00B0C"));
+        QCOMPARE(text(formatCelsius(b, 42.85F)), QStringLiteral("43\u00B0C"));
+        QCOMPARE(text(formatCelsius(b, -4.6F)), QStringLiteral("-5\u00B0C"));
+        QCOMPARE(text(formatCelsius(b, 0.0F)), QStringLiteral("0\u00B0C"));
+        QCOMPARE(text(formatCelsius(b, 1e30F)), QStringLiteral("9999\u00B0C"));
+        QCOMPARE(text(formatCelsius(b, std::nullopt)), QStringLiteral("--\u00B0C"));
+        QCOMPARE(text(formatCelsius(b, std::numeric_limits<float>::quiet_NaN())),
+                 QStringLiteral("--\u00B0C"));
+        QCOMPARE(text(formatRpm(b, 2400.4F)), QStringLiteral("2400rpm"));
+        QCOMPARE(text(formatRpm(b, -1.0F)), QStringLiteral("0rpm"));
+        QCOMPARE(text(formatRpm(b, std::nullopt)), QStringLiteral("--rpm"));
+    }
+
+    void fixedScaleChartUsesGivenMaximum()
+    {
+        Theme theme;
+        theme.chartHeight = 40;
+        MetricRegistry registry(8);
+        const auto t = registry.add({.id = "t", .label = "T", .unit = MetricUnit::Celsius});
+        registry.push(t, 50.0F);
+        registry.push(t, 150.0F); // above the maximum: clipped to full height
+        ChartWidget chart(registry, {{.metric = t, .color = Qt::red}}, theme, ChartScale::Fixed,
+                          100.0);
+        chart.resize(2, theme.chartHeight);
+        const QImage image = chart.grab().toImage();
+        QCOMPARE(chart.lastScale(), 100.0);
+        QCOMPARE(barHeight(image, 1, Qt::red), 40);
+        QCOMPARE(barHeight(image, 0, Qt::red), 20);
+    }
+
     void headersFitDefaultPanel()
     {
         // In the default (narrow) width, at both atlas scales:
@@ -120,6 +155,8 @@ private slots:
             QVERIFY(fits(u"CPU", u"100%"));
             QVERIFY(fits(u"Swap", u"999M"));
             QVERIFY(fits(u"Mem", u"7.1G/62G"));
+            QVERIFY(fits(u"Temp", u"100\u00B0C"));
+            QVERIFY(fits(u"iwlwifi_1", u"45\u00B0C"));
         }
     }
 

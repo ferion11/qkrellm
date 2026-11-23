@@ -26,7 +26,7 @@ CMake targets mirror this: `qkrellm_sensors` (no Qt), `qkrellm_core` (Qt6::Core 
 sensors), `qkrellm_ui` (adds Gui/Widgets), `qkrellm` executable. `qkrellm_pluginhost`
 appears in M4.
 
-## Data flow (`core/sampler`, `core/monitors/{cpu,memory,net,disk}monitor`)
+## Data flow (`core/sampler`, `core/monitors/{cpu,memory,net,disk,hwmon}monitor`)
 
 ```
 QTimer (CoarseTimer, default 1 Hz)

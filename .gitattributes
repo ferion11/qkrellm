@@ -3,3 +3,4 @@
 *.svg text
 # Kernel snapshots must stay byte-exact.
 tests/fixtures/proc/** -text -diff linguist-generated
+tests/fixtures/sys/** -text -diff linguist-generated

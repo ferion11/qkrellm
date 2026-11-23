@@ -14,7 +14,7 @@ indent_size = 2
 [*.md]
 trim_trailing_whitespace = false
 
-[tests/fixtures/proc/**]
+[tests/fixtures/{proc,sys}/**]
 # Fixtures are byte-exact copies of kernel files: never touch them.
 insert_final_newline = unset
 trim_trailing_whitespace = unset

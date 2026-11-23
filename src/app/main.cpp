@@ -3,6 +3,7 @@
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/diskmonitor.h"
+#include "core/monitors/hwmonmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
 #include "core/sampler.h"
@@ -21,6 +22,34 @@ namespace {
 // Enough history for a chart a few hundred pixels wide (one sample per pixel column).
 constexpr std::size_t kHistoryLength = 256;
 constexpr std::chrono::milliseconds kSampleInterval{1000};
+constexpr double kTemperatureChartMax = 100.0; // °C at full chart height
+
+/// CPU temperature as a chart panel, then one header-only row per other chip and fan.
+void addHwmonPanels(qk::ui::MainWindow& window, qk::core::HwmonMonitor& hwmon)
+{
+    using qk::sensors::HwmonSensor;
+    const qk::ui::Theme& theme = window.theme();
+    const auto cpu = hwmon.cpuTemperature();
+    for (const std::size_t i : hwmon.defaultSelection()) {
+        const auto handle = hwmon.enable(i);
+        if (!handle) {
+            continue;
+        }
+        const HwmonSensor& s = hwmon.sensors()[i];
+        const bool temp = s.kind == HwmonSensor::Kind::Temperature;
+        qk::ui::PanelSpec spec{
+            .label = QString::fromStdString(temp ? hwmon.displayName(i) : s.label),
+            .valueMetric = handle,
+            .valueFormat = temp ? qk::ui::ValueFormat::Celsius : qk::ui::ValueFormat::Rpm,
+        };
+        if (cpu && i == *cpu) {
+            spec.label = QStringLiteral("Temp");
+            spec.series = {{.metric = *handle, .color = theme.seriesSecondary}};
+            spec.chartMaximum = kTemperatureChartMax;
+        }
+        window.addPanel(std::move(spec));
+    }
+}
 } // namespace
 
 int main(int argc, char* argv[])
@@ -50,6 +79,7 @@ int main(int argc, char* argv[])
     if (!disk->isValid()) {
         qWarning("qkrellm: cannot read /proc/diskstats; disk monitor disabled");
     }
+    auto hwmon = std::make_unique<qk::core::HwmonMonitor>(registry);
     auto net = std::make_unique<qk::core::NetMonitor>(registry);
     if (!net->isValid()) {
         qWarning("qkrellm: cannot read /proc/net/dev; network monitor disabled");
@@ -116,10 +146,12 @@ int main(int argc, char* argv[])
             .chartScale = qk::ui::ChartScale::Auto,
         });
     }
+    addHwmonPanels(window, *hwmon);
     sampler.addMonitor(std::move(cpu));
     sampler.addMonitor(std::move(mem));
     sampler.addMonitor(std::move(disk));
     sampler.addMonitor(std::move(net));
+    sampler.addMonitor(std::move(hwmon));
     QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, &qk::ui::MainWindow::refresh);
 
     if (parser.isSet(exitAfterFirstPaint)) {

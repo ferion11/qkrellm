@@ -59,7 +59,12 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       (`counterRate` shared with network), `DiskMonitor` (device-backed whole disks,
       per-disk and aggregate read/write bytes/s), one aggregate "Disk" panel (read + write
       stacked, autoscaled). Per-disk panels come with M3 config. Fixtures from two machines
-- [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)
+- [x] hwmon temperatures/fans (`/sys/class/hwmon`): `sensors/hwmon` discovery,
+      `sensors/sysfsvalue` (+ fuzzer), `HwmonMonitor` (opt-in `enable()`: only shown sensors
+      are read; first read is timed and sensors slower than 100 µs — Asus WMI fans, NVMe —
+      are read every 10 s), CPU temperature chart panel
+      (fixed 0–100 °C, `ChartScale::Fixed`) + header-only rows for other chips and fans;
+      `tests/fixtures/capture-hwmon.sh`. Voltages left out (battery comes from power_supply)
 - [ ] Battery (`/sys/class/power_supply`)
 - [ ] Filesystems (`statvfs` on `/proc/mounts` entries)
 - [ ] Clock / uptime / load
@@ -90,9 +95,10 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 M2 in progress, one monitor per branch with the `new-monitor` skill (fixtures from ≥ 2
 machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel):
 
-1. hwmon temperatures/fans (`/sys/class/hwmon`): first sysfs source — many small files
-   (one `ProcFile` per sensor, discovered at startup), `MetricUnit::Celsius`, a chart scale
-   for temperatures (fixed 0–100 °C or autoscale: decide), header "CPU 54°C".
-Open questions: devices that appear after startup (USB disks/NICs) are not shown — revisit
-with M3 config; per-CPU / per-disk charts as config options in M3; swap panel when swap
-is enabled after startup.
+1. Battery (`/sys/class/power_supply`): capacity %, status (charging/discharging), time
+   left from energy/power or charge/current; header-only panel or krell.
+2. Pending fixtures: a second machine's hwmon tree (`tests/fixtures/capture-hwmon.sh
+   linux-6.18.18-manjaro-28cpu` on the maintainer's Manjaro box → tarball).
+Open questions: devices/sensors that appear after startup are not shown — revisit with M3
+config (also: choosing which hwmon sensors to show, per-CPU / per-disk charts); swap panel
+when swap is enabled after startup.

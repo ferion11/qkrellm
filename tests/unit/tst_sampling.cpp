@@ -2,6 +2,7 @@
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/diskmonitor.h"
+#include "core/monitors/hwmonmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
 #include "core/sampler.h"
@@ -81,6 +82,7 @@ namespace {
 
 using qk::core::CpuMonitor;
 using qk::core::DiskMonitor;
+using qk::core::HwmonMonitor;
 using qk::core::MemoryMonitor;
 using qk::core::MetricRegistry;
 using qk::core::MetricUnit;
@@ -363,6 +365,74 @@ private slots:
         QVERIFY(other.history(missing.total()).empty());
     }
 
+    void hwmonMonitorFromFixtureTree()
+    {
+        MetricRegistry registry(8);
+        HwmonMonitor hwmon(registry, QK_FIXTURES_DIR "/sys/linux-6.18-x86_64-20cpu/class/hwmon");
+        QCOMPARE(hwmon.sensors().size(), std::size_t{22});
+        QCOMPARE(registry.size(), std::size_t{0}); // nothing registered until enabled
+
+        QCOMPARE(hwmon.cpuTemperature().value_or(99), std::size_t{7}); // coretemp Package id 0
+        // CPU first, then the first temperature of each other chip, then fans.
+        const std::vector<std::size_t> expected{7, 0, 1, 2, 6, 4, 5};
+        QCOMPARE(hwmon.defaultSelection(), expected);
+        QCOMPARE(hwmon.displayName(0), std::string("acpitz"));
+        QCOMPARE(hwmon.displayName(1), std::string("nvme1")); // two "nvme" chips
+        QCOMPARE(hwmon.displayName(2), std::string("nvme0"));
+        QCOMPARE(hwmon.displayName(7), std::string("coretemp"));
+
+        const auto package = hwmon.enable(7);
+        QVERIFY(package);
+        QCOMPARE(hwmon.enable(7), package); // idempotent
+        QVERIFY(!hwmon.enable(1000));
+        QCOMPARE(registry.info(*package).id, std::string("hwmon.coretemp.coretemp.0.temp1"));
+        QCOMPARE(registry.info(*package).unit, MetricUnit::Celsius);
+        QVERIFY(registry.history(*package).empty()); // first read happens in sample()
+        QCOMPARE(hwmon.periodTicksOf(7), 0);
+
+        const auto nvme = hwmon.enable(1);
+        const auto fan = hwmon.enable(4);
+        QVERIFY(nvme && fan);
+        QCOMPARE(registry.info(*fan).id, std::string("hwmon.asus.asus-nb-wmi.fan1"));
+        QCOMPARE(registry.info(*fan).unit, MetricUnit::Rpm);
+
+        hwmon.sample();
+        QCOMPARE(registry.history(*package).latest(), 31.0F); // 31000 millidegrees
+        QCOMPARE(registry.history(*nvme).latest(), 42.85F);
+        QCOMPARE(registry.history(*fan).latest(), 0.0F);
+        QCOMPARE(hwmon.periodTicksOf(7), 1); // fixture files are plain files: fast
+        hwmon.sample();
+        QCOMPARE(registry.history(*package).size(), std::size_t{2});
+        QCOMPARE(registry.size(), std::size_t{3});
+    }
+
+    void hwmonMonitorReadsSlowSensorsLessOften()
+    {
+        MetricRegistry registry(64);
+        // Threshold 0: every sensor counts as slow.
+        HwmonMonitor hwmon(registry, QK_FIXTURES_DIR "/sys/linux-6.18-x86_64-20cpu/class/hwmon",
+                           std::chrono::microseconds(0));
+        const auto handle = hwmon.enable(7);
+        QVERIFY(handle);
+        hwmon.sample(); // tick 0: first read, timed -> slow
+        QCOMPARE(hwmon.periodTicksOf(7), HwmonMonitor::kSlowPeriodTicks);
+        for (int i = 1; i < 2 * HwmonMonitor::kSlowPeriodTicks; ++i) {
+            hwmon.sample();
+        }
+        // Ticks 0, 10 read; 20 ticks in total.
+        QCOMPARE(registry.history(*handle).size(), std::size_t{2});
+    }
+
+    void hwmonMonitorWithoutSensors()
+    {
+        MetricRegistry registry(8);
+        HwmonMonitor hwmon(registry, "/nonexistent/qkrellm/hwmon");
+        QVERIFY(hwmon.sensors().empty());
+        QVERIFY(!hwmon.cpuTemperature());
+        QVERIFY(hwmon.defaultSelection().empty());
+        hwmon.sample(); // must not crash
+    }
+
     void samplerHonoursPeriodsAndSignals()
     {
         Sampler sampler(std::chrono::milliseconds(1000));
@@ -408,6 +478,11 @@ private slots:
         auto disk = std::make_unique<DiskMonitor>(registry); // real /proc/diskstats + sysfs
         QVERIFY(disk->isValid());
         sampler.addMonitor(std::move(disk));
+        auto hwmon = std::make_unique<HwmonMonitor>(registry); // real /sys/class/hwmon
+        for (const std::size_t i : hwmon->defaultSelection()) {
+            QVERIFY(hwmon->enable(i));
+        }
+        sampler.addMonitor(std::move(hwmon));
         auto net = std::make_unique<NetMonitor>(registry); // real /proc/net/dev + sysfs
         QVERIFY(net->isValid());
         sampler.addMonitor(std::move(net));

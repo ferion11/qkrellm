@@ -27,6 +27,11 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- hwmon monitor (M2): sysfs integer parser (+ fuzzer), hwmon discovery, `HwmonMonitor`
+  reading only the sensors shown (slow ones, timed on first read, every 10 s); "Temp" panel with the CPU temperature (coretemp/k10temp/
+  zenpower/cpu_thermal) on a fixed 0–100 °C chart, header-only rows for other chips and
+  fans; `ChartScale::Fixed` (replaces `Fraction`), "°C"/"rpm" formatters, `MetricUnit::Rpm`,
+  `tests/fixtures/capture-hwmon.sh`; sysfs fixtures kept byte-exact like /proc ones.
 - Disk I/O monitor (M2): `/proc/diskstats` parser (+ fuzzer), `DiskMonitor` (whole disks
   backed by a device; per-disk and aggregate read/write bytes/s), aggregate "Disk" panel
   with read + write stacked and autoscaled. `counterRate` moved to `sensors/rate.h`.

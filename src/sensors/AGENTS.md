@@ -3,7 +3,8 @@
 Contents (ADR 0005): `textscan` (shared allocation-free tokenizing), `procstat` (parser of
 /proc/stat), `cpuusage` (deltas between samples), `meminfo` (parser of /proc/meminfo + usage
 derivation), `netdev` (parser of /proc/net/dev), `diskstats` (parser of
-/proc/diskstats), `rate` (`counterRate` for monotonically increasing counters), `ProcFile` (the only I/O: open once,
+/proc/diskstats), `rate` (`counterRate` for monotonically increasing counters), `sysfsvalue` (one-integer
+sysfs attributes), `hwmon` (startup discovery of /sys/class/hwmon inputs), `ProcFile` (the only I/O: open once,
 `pread`). Library `qkrellm_sensors` links **no Qt**. Rules:
 
 ## Split parsing from I/O
@@ -27,7 +28,8 @@ derivation), `netdev` (parser of /proc/net/dev), `diskstats` (parser of
 
 ## Tests are mandatory
 
-1. Capture: `tests/fixtures/capture.sh <tag>` → writes to `/tmp/qkrellm/scratch/<tag>/`.
+1. Capture: `tests/fixtures/capture.sh <tag>` (or `capture-hwmon.sh <tag>` for sysfs
+   hwmon trees) → writes to `/tmp/qkrellm/scratch/<tag>/`.
 2. **Scrub** hostnames, MACs, serials, user paths; copy needed files to
    `tests/fixtures/proc/<tag>/…` (byte-exact; `.gitattributes` keeps them untouched).
 3. Unit test in `tests/unit/tst_<parser>.cpp` covering every fixture tag plus hand-made
