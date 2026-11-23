@@ -49,7 +49,7 @@ jobs:
           sudo apt-get install -y ninja-build cmake g++ libgl-dev libxkbcommon-dev libfontconfig1 libegl1
       - uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.3'
+          version: '6.5.3' # keep in sync with scripts/check-qt-min.sh
           cache: true
       - name: Configure, build, test
         run: cmake --workflow --preset dev

@@ -24,6 +24,7 @@ scripts/lint.sh fix                    # apply clang-format
 benchmarks/measure.sh --check          # resource budget (needs release build)
 scripts/coverage.sh                    # -> /tmp/qkrellm/coverage/index.html
 scripts/fuzz.sh [seconds]              # every parser fuzzer (default 60 s each)
+scripts/check-qt-min.sh                # build + test against Qt 6.5 (minimum; installs it once)
 ctest --preset dev -R abi              # run a subset
 ```
 
@@ -78,6 +79,7 @@ approval.
 
 - [ ] `cmake --workflow --preset dev` passes with zero warnings; `asan` workflow passes
 - [ ] `scripts/lint.sh` clean
+- [ ] New Qt API used? `scripts/check-qt-min.sh` passes (local Qt is newer than the 6.5 minimum)
 - [ ] New/changed parser: fixture(s) + unit test (+ fuzzer from M1 on)
 - [ ] Budget-relevant change: `benchmarks/measure.sh --check` output in the PR
 - [ ] ABI change: `include/qkrellm/AGENTS.md` checklist done

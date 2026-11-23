@@ -7,6 +7,7 @@
 - [ ] `cmake --workflow --preset dev` passes with zero warnings
 - [ ] `cmake --workflow --preset asan` passes
 - [ ] `scripts/lint.sh` clean
+- [ ] `scripts/check-qt-min.sh` passes if new Qt APIs are used
 - [ ] Parser changes: fixtures + unit test (+ fuzzer)
 - [ ] Plugin ABI changes: `include/qkrellm/AGENTS.md` checklist; reviewed by `abi-guardian`
 - [ ] `docs/roadmap.md`, `CHANGELOG.md` updated; ADR added if a decision was made

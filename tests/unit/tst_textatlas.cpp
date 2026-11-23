@@ -74,7 +74,8 @@ private slots:
         QTest::newRow("empty") << QByteArray();
         QTest::newRow("no header") << QByteArray("scale 1\npixel_size 11\nline_height 14\n"
                                                  "g 63 0 0 1 1 0 0 1\n");
-        QTest::newRow("wrong version") << QByteArray(
+        // QByteArray(std::string) needs Qt > 6.5: use fromStdString (minimum Qt is 6.5).
+        QTest::newRow("wrong version") << QByteArray::fromStdString(
             std::string("qkatlas 2") + std::string(kMinimal.substr(kMinimal.find("\nscale"))));
         QTest::newRow("bad scale") << QByteArray(withLine(kMinimal, "scale 3").c_str());
         QTest::newRow("codepoint out of range")

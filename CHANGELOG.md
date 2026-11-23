@@ -23,6 +23,10 @@ All notable changes to this project are documented here. Format:
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
 
+### Fixed
+- Build with Qt 6.5 (minimum): `tst_textatlas` used `QByteArray(std::string)`, which only
+  exists in newer Qt. `scripts/check-qt-min.sh` now reproduces the CI minimum-Qt job locally.
+
 ### Changed
 - Text rendering strategy decided (ADR 0011): panels will use bitmap glyph atlases by
   default; system fonts become opt-in. Investigation numbers in `docs/resource-budget.md`.
