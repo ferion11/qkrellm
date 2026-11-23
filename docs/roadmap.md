@@ -58,7 +58,7 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 - [x] Disk I/O (`/proc/diskstats`): `sensors/diskstats` (+ fuzzer), `sensors/rate`
       (`counterRate` shared with network), `DiskMonitor` (device-backed whole disks,
       per-disk and aggregate read/write bytes/s), one aggregate "Disk" panel (read + write
-      stacked, autoscaled). Per-disk panels come with M3 config
+      stacked, autoscaled). Per-disk panels come with M3 config. Fixtures from two machines
 - [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)
 - [ ] Battery (`/sys/class/power_supply`)
 - [ ] Filesystems (`statvfs` on `/proc/mounts` entries)
@@ -93,7 +93,6 @@ machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a pan
 1. hwmon temperatures/fans (`/sys/class/hwmon`): first sysfs source — many small files
    (one `ProcFile` per sensor, discovered at startup), `MetricUnit::Celsius`, a chart scale
    for temperatures (fixed 0–100 °C or autoscale: decide), header "CPU 54°C".
-2. Pending fixtures: a second machine's `/proc/diskstats` (maintainer's Manjaro box).
 Open questions: devices that appear after startup (USB disks/NICs) are not shown — revisit
 with M3 config; per-CPU / per-disk charts as config options in M3; swap panel when swap
 is enabled after startup.

@@ -59,6 +59,25 @@ private slots:
         QVERIFY(!s->find("sda"));
     }
 
+    void parsesSecondMachineFixture()
+    {
+        // Maintainer's Manjaro laptop: SATA disk + partition, optical drive, loop device.
+        QFile f(QStringLiteral(QK_FIXTURES_DIR "/proc/linux-6.18.18-manjaro-28cpu/proc/diskstats"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const auto s = parse(f.readAll());
+        QCOMPARE(s->count, std::size_t{4});
+        const DiskStat& sda = s->devices[0];
+        QCOMPARE(sda.name(), std::string_view("sda"));
+        QCOMPARE(sda.major, 8U);
+        QCOMPARE(sda.readsCompleted, 73611U);
+        QCOMPARE(sda.sectorsRead, 3797170U);
+        QCOMPARE(sda.writesCompleted, 55782U);
+        QCOMPARE(sda.sectorsWritten, 3431032U);
+        QVERIFY(s->find("sda1"));
+        QVERIFY(s->find("sr0"));
+        QCOMPARE(s->devices.at(s->find("loop0").value_or(0)).sectorsRead, 28U);
+    }
+
     void snapshotsAdvance()
     {
         const auto a = parse(fixture("diskstats"));
