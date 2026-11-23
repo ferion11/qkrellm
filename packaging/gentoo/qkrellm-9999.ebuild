@@ -20,6 +20,7 @@ RDEPEND="${DEPEND}"
 src_configure() {
 	local mycmakeargs=(
 		-DQKRELLM_BUILD_TESTS=$(usex test)
+		-DQKRELLM_BUILD_TOOLS=OFF
 		-DQKRELLM_USE_CCACHE=OFF
 		-DQKRELLM_USE_MOLD=OFF
 	)

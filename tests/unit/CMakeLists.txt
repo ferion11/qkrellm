@@ -15,3 +15,14 @@ qk_add_unit_test(tst_version
     SOURCES tst_version.cpp
     LIBS qkrellm_core)
 target_compile_definitions(tst_version PRIVATE QK_EXPECTED_VERSION="${PROJECT_VERSION}")
+
+qk_add_unit_test(tst_textatlas
+    SOURCES tst_textatlas.cpp
+    LIBS qkrellm_ui)
+target_compile_definitions(tst_textatlas PRIVATE QK_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+
+# ENABLE_EXPORTS lets the test's FcFontList() interpose libfontconfig's (ADR 0011 probe).
+qk_add_unit_test(tst_bitmaptext
+    SOURCES tst_bitmaptext.cpp
+    LIBS qkrellm_ui ${CMAKE_DL_LIBS})
+set_target_properties(tst_bitmaptext PROPERTIES ENABLE_EXPORTS ON)

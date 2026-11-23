@@ -36,6 +36,7 @@ Build trees: `/tmp/qkrellm/build/<preset>`; the binary is `…/src/app/qkrellm`.
 src/app → src/ui → src/pluginhost (M4) → src/core → src/sensors (M1)
 include/qkrellm/   public C ABI (plugin.h) + header-only C++ wrapper (plugin.hpp)
 plugins/           example plugins — built ONLY against include/qkrellm
+tools/             developer tools, never installed (glyphgen: bitmap font atlases)
 tests/{unit,abi,fuzz,fixtures}   benchmarks/   scripts/   docs/{adr,…}   packaging/
 ```
 
@@ -47,7 +48,8 @@ Details: [`docs/architecture.md`](docs/architecture.md).
 1. **Qt modules: Core, Gui, Widgets only** in the app (ADR 0002; enforced by CTest
    `budget.qt_modules`). Qt ≥ 6.5 APIs only.
 2. **No QML / Qt Quick / OpenGL widgets** (ADR 0003). Paint with `QPainter`, repaint only
-   dirty regions.
+   dirty regions. **Panel text goes through `TextRenderer`; never `QFont`/`drawText` in
+   panels** — the bitmap renderer keeps startup independent of installed fonts (ADR 0011).
 3. **Resource budget** (ADR 0006, `docs/resource-budget.md`): private memory ≤ 16 MiB,
    idle CPU ≤ 0.1 %, startup ≤ 150 ms. **No heap allocation in the sampling hot path.**
 4. **Parsers are pure** (`std::string_view` → struct/`std::optional`), each with byte-exact

@@ -21,9 +21,10 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 - [x] Investigate first-text-draw cost (~120 ms) and private heap (~9.8 MiB): both are
       Qt's font database populated from fontconfig (∝ installed fonts) → ADR 0011
-- [ ] `tools/glyphgen` + committed atlases (DejaVu, ASCII + Latin-1, 1×/2×); `ui`:
-      `TextRenderer`, `BitmapTextRenderer`; MainWindow uses it; test that the font
-      database stays unpopulated; startup budget met on xcb
+- [x] Bitmap text (ADR 0011): `tools/glyphgen`, committed DejaVu atlases (ASCII + Latin-1,
+      1×/2×), `TextRenderer` / `BitmapTextRenderer` / `SystemFontTextRenderer`, MainWindow
+      uses it, `tst_bitmaptext` proves the font database stays unpopulated.
+      xcb: startup 164 → 44 ms, private 12.0 → 2.5 MiB
 - [ ] `src/sensors/`: `qkrellm_sensors` target; `/proc/stat` parser + fixtures (≥ 2 kernels) + fuzzer
 - [ ] `core`: `RingBuffer`, `Sampler` (single coarse timer), `MetricRegistry`
 - [ ] `ui`: `ChartWidget`, `Panel`; CPU panel visible in MainWindow
@@ -42,7 +43,7 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 ## M3 — Configuration and themes
 
 - [ ] Config schema + migrations (QSettings INI), preferences dialog
-- [ ] Opt-in `SystemFontTextRenderer` (ADR 0011)
+- [ ] Config option to select `SystemFontTextRenderer` (class exists since M1; ADR 0011)
 - [ ] Theme format (`theme.ini` + images), loader, 1–2 built-in themes
 - [ ] Decide SVG handling without QtSvg
 
@@ -62,8 +63,7 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## Next steps
 
-1. Implement the bitmap text path (first open M1 item): atlas format (PNG + metrics in a
-   Qt resource), `tools/glyphgen` (offline, DejaVu, Latin-1, 1×/2×), `TextRenderer` +
-   `BitmapTextRenderer`, switch `MainWindow` to it, add the "font database untouched" test,
-   and confirm with `QT_QPA_PLATFORM=xcb benchmarks/measure.sh --check`.
-2. Then the `/proc/stat` vertical slice with the `new-monitor` skill.
+1. `/proc/stat` vertical slice with the `new-monitor` skill: `qkrellm_sensors` target,
+   pure parser + fixtures (≥ 2 kernel tags) + fuzzer, then `RingBuffer`/`Sampler` in core
+   and a `ChartWidget`/`Panel` in ui. Panel text must use `TextRenderer` (ADR 0011).
+2. Open question carried over: CI must run the fuzzer for 60 s once the first one exists.

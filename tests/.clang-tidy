@@ -1,0 +1,6 @@
+# Qt Test code: QVERIFY/QCOMPARE return early on failure and QFETCH declares variables,
+# which these checks cannot see.
+InheritParentConfig: true
+Checks: >
+  -bugprone-unchecked-optional-access,
+  -misc-const-correctness

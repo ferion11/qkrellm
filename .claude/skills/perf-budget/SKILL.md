@@ -27,7 +27,10 @@ Compare against the previous row for the same platform and the baseline table in
   For hot-path allocations look at "most calls to allocation functions".
 - Massif: `valgrind --tool=massif --massif-out-file=/tmp/qkrellm/bench/massif.out <bin> --exit-after-first-paint`
 - Mappings: `awk '/^[0-9a-f]+-/{f=$6} /^Private_Dirty:/{r[f]+=$2} END{for(k in r) print r[k], k}' /proc/<pid>/smaps | sort -rn | head`
-- Startup: known cost — first `drawText` ≈ 120 ms (fontconfig). Time phases with
-  `QElapsedTimer` printouts in a scratch build, not in committed code.
+- Startup: anything that constructs a `QFont`/`QFontMetrics` or calls `drawText` before
+  the first paint populates Qt's font database (≈ 120 ms and ≈ 10 MiB with many installed
+  fonts — ADR 0011); `tst_bitmaptext` guards the panel path. Time phases with
+  `QElapsedTimer` printouts in a scratch build (or `benchmarks/text-cost/`), not in
+  committed code.
 
 Changing a limit requires a new ADR with before/after numbers.

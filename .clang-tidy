@@ -1,3 +1,6 @@
+# Disabled pro-bounds-avoid-unchecked-container-access / pro-bounds-constant-array-index:
+# LLVM 23 checks that ban every operator[] even after an explicit bounds check; bounds are
+# checked in code and covered by ASan + fuzzing instead.
 # Run via scripts/lint.sh (uses a sanitised copy of /tmp/qkrellm/build/dev/compile_commands.json).
 Checks: >
   -*,
@@ -12,6 +15,8 @@ Checks: >
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-avoid-c-arrays,
   -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
   misc-*,
   -misc-include-cleaner,
   -misc-non-private-member-variables-in-classes,

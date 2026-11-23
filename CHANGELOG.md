@@ -13,6 +13,12 @@ All notable changes to this project are documented here. Format:
   budget tooling and baseline, ADRs 0001–0010, agent instructions, Claude Code skills,
   agents and hooks, GitHub CI, Gentoo live ebuild draft.
 
+### Added
+- Bitmap panel text (ADR 0011): `tools/glyphgen` atlas generator, DejaVu Sans atlases
+  (ASCII + Latin-1, 1×/2×), `TextRenderer` interface with `BitmapTextRenderer` (default)
+  and `SystemFontTextRenderer` (fallback/opt-in). Startup on X11 164 → 44 ms, private
+  memory 12.0 → 2.5 MiB.
+
 ### Changed
 - Text rendering strategy decided (ADR 0011): panels will use bitmap glyph atlases by
   default; system fonts become opt-in. Investigation numbers in `docs/resource-budget.md`.

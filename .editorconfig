@@ -18,3 +18,8 @@ trim_trailing_whitespace = false
 # Fixtures are byte-exact copies of kernel files: never touch them.
 insert_final_newline = unset
 trim_trailing_whitespace = unset
+
+[src/ui/fonts/{LICENSE.*,*.qkatlas}]
+# Third-party licence text and generated atlases: keep byte-exact.
+trim_trailing_whitespace = unset
+insert_final_newline = unset

@@ -14,7 +14,7 @@ mode=${1:-all}
 
 cd "$repo"
 mapfile -t sources < <(git ls-files '*.c' '*.cpp' '*.h' '*.hpp')
-mapfile -t tus < <(git ls-files 'src/*.cpp' 'tests/*.cpp' 'plugins/*.c' 'tests/*.c')
+mapfile -t tus < <(git ls-files 'src/*.cpp' 'tests/*.cpp' 'tools/*.cpp' 'plugins/*.c' 'tests/*.c')
 
 have() { command -v "$1" >/dev/null 2>&1; }
 status=0

@@ -19,7 +19,8 @@ Review the diff (`git diff main...HEAD` plus unstaged `git diff`). Look for:
 3. **Timers/threads**: more than the single sampler timer, precise timers where coarse suffice,
    busy loops, new threads without justification.
 4. **Startup**: work done before first paint that could be deferred; eager plugin/theme
-   loading; font database access.
+   loading; any `QFont`/`QFontMetrics`/`drawText` in panels instead of `TextRenderer`
+   (populates the font database, ADR 0011).
 5. **Dependencies**: new `find_package`, Qt modules, or libraries (needs an ADR; check
    `cmake/QkQtModules.cmake` and `budget.qt_modules`).
 

@@ -28,6 +28,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(QKRELLM_BUILD_TESTS "Build unit and ABI tests" ON)
 option(QKRELLM_BUILD_PLUGINS "Build the example plugins" ON)
+option(QKRELLM_BUILD_TOOLS "Build developer tools (tools/, never installed)" ON)
 option(QKRELLM_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(QKRELLM_ENABLE_SANITIZERS "Build with AddressSanitizer + UBSan" OFF)
 option(QKRELLM_ENABLE_COVERAGE "Build with gcov instrumentation" OFF)
@@ -47,6 +48,10 @@ qt_standard_project_setup()
 include(GNUInstallDirs)
 
 add_subdirectory(src)
+
+if(QKRELLM_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
 
 if(QKRELLM_BUILD_PLUGINS)
     add_subdirectory(plugins)

@@ -34,7 +34,14 @@ History: `/tmp/qkrellm/bench/results.tsv` (date, commit, startup, private, pss, 
 | offscreen | 129–132 ms | 11.5 MiB | 22.6 MiB | 53 MiB | 0 ‰ |
 | xcb | 158–170 ms | 12.0 MiB | 23.7 MiB | 55 MiB | 0 ‰ |
 
-Findings:
+## After bitmap text (M1, 2026-11-23, same machine and build type)
+
+| Platform | startup | private | PSS | RSS | CPU |
+|---|---|---|---|---|---|
+| offscreen | 21 ms | 1.9 MiB | 11.3 MiB | 29 MiB | 0 ‰ |
+| xcb | 44 ms | 2.5 MiB | 12.3 MiB | 31 MiB | 0 ‰ |
+
+M0 findings (before bitmap text):
 - ~41 MiB of RSS is file-backed and shared: libQt6Gui/Widgets/Core (~17 MiB),
   two fontconfig caches (~8 MiB), locale archive (~2 MiB), libstdc++.
 
@@ -55,8 +62,7 @@ Machine: 6 240 installed fonts. Details and decision: ADR 0011.
 - Rasterising text is ≈ 0.3 ms; syscalls ≈ 14 ms in total — the cost is CPU.
 - Cost scales with the user's installed fonts, so it cannot be budgeted unless panels avoid
   system fonts → bitmap atlases by default (ADR 0011).
-- Until `BitmapTextRenderer` lands, the hello window still uses `drawText` and keeps the
-  M0 numbers above.
+- Implemented in M1: see "After bitmap text" above.
 
 Reproduce with the standalone experiment in `benchmarks/text-cost/` (usage in its
 `main.cpp`; modes `notext`, `system`, `appfont`, `gen`, `bitmap`), and profile the app with
