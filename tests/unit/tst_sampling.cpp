@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
+#include "core/monitors/diskmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
 #include "core/sampler.h"
@@ -79,6 +80,7 @@ void operator delete[](void* p, std::size_t /*size*/) noexcept
 namespace {
 
 using qk::core::CpuMonitor;
+using qk::core::DiskMonitor;
 using qk::core::MemoryMonitor;
 using qk::core::MetricRegistry;
 using qk::core::MetricUnit;
@@ -301,6 +303,66 @@ private slots:
         QCOMPARE(registry.size(), std::size_t{0});
     }
 
+    void diskMonitorRatesFromFixtures()
+    {
+        const QByteArray t0 = readFile(fixtureDir() + QStringLiteral("diskstats"));
+        const QByteArray t1 = readFile(fixtureDir() + QStringLiteral("diskstats.1s"));
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("diskstats"));
+        // Fake /sys/block: both NVMe disks have a device; loop0 does not.
+        for (const char* d : {"block/nvme0n1/device", "block/nvme1n1/device", "block/loop0"}) {
+            QVERIFY(QDir(dir.path()).mkpath(QLatin1StringView(d)));
+        }
+        QVERIFY(rewrite(path, t0));
+
+        MetricRegistry registry(8);
+        DiskMonitor disk(registry, qPrintable(path),
+                         qPrintable(dir.filePath(QStringLiteral("block"))));
+        QVERIFY(disk.isValid());
+        QCOMPARE(disk.disks().size(), std::size_t{2});
+        QCOMPARE(disk.disks()[0].name, std::string("nvme1n1")); // /proc/diskstats order
+        QCOMPARE(registry.info(disk.disks()[1].write).id, std::string("disk.nvme0n1.write"));
+
+        QVERIFY(rewrite(path, t1));
+        const auto start = DiskMonitor::Clock::now();
+        disk.sampleAt(start + std::chrono::seconds(1));
+        // nvme1n1 wrote 3832 sectors, nvme0n1 read 256: rates <= the 1 s values (elapsed
+        // time is measured from construction, so slightly more than 1 s).
+        const float write = registry.history(disk.write()).latest();
+        const float read = registry.history(disk.read()).latest();
+        QVERIFY(write > 0.9F * 3832 * 512 && write <= 3832.0F * 512);
+        QVERIFY(read > 0.9F * 256 * 512 && read <= 256.0F * 512);
+        QCOMPARE(registry.history(disk.total()).latest(), read + write);
+        QCOMPARE(registry.history(disk.disks()[0].write).latest(), write);
+
+        QVERIFY(rewrite(path, t0)); // counters went back: 0, not a huge rate
+        disk.sampleAt(start + std::chrono::seconds(2));
+        QCOMPARE(registry.history(disk.total()).latest(), 0.0F);
+    }
+
+    void diskMonitorFallbackAndMissingFile()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("diskstats"));
+        QVERIFY(rewrite(path, readFile(fixtureDir() + QStringLiteral("diskstats"))));
+        // No device links (e.g. some VMs): whole disks listed in /sys/block, minus loop/ram.
+        for (const char* d : {"block/nvme0n1", "block/loop0", "block/ram0"}) {
+            QVERIFY(QDir(dir.path()).mkpath(QLatin1StringView(d)));
+        }
+        MetricRegistry registry(8);
+        DiskMonitor disk(registry, qPrintable(path),
+                         qPrintable(dir.filePath(QStringLiteral("block"))));
+        QCOMPARE(disk.disks().size(), std::size_t{1});
+        QCOMPARE(disk.disks()[0].name, std::string("nvme0n1"));
+
+        MetricRegistry other(8);
+        DiskMonitor missing(other, "/nonexistent/qkrellm/diskstats");
+        QVERIFY(!missing.isValid());
+        QVERIFY(missing.disks().empty());
+        missing.sample(); // must not crash or push
+        QVERIFY(other.history(missing.total()).empty());
+    }
+
     void samplerHonoursPeriodsAndSignals()
     {
         Sampler sampler(std::chrono::milliseconds(1000));
@@ -343,6 +405,9 @@ private slots:
         auto mem = std::make_unique<MemoryMonitor>(registry, "/proc/meminfo");
         QVERIFY(mem->isValid());
         sampler.addMonitor(std::move(mem));
+        auto disk = std::make_unique<DiskMonitor>(registry); // real /proc/diskstats + sysfs
+        QVERIFY(disk->isValid());
+        sampler.addMonitor(std::move(disk));
         auto net = std::make_unique<NetMonitor>(registry); // real /proc/net/dev + sysfs
         QVERIFY(net->isValid());
         sampler.addMonitor(std::move(net));

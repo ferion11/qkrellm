@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "sensors/netdev.h"
+#include "sensors/rate.h"
 
 #include <cstddef>
 #include <cstdint>

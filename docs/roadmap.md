@@ -55,7 +55,10 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       the monotonic clock, counter resets → 0), rx + tx stacked charts with power-of-two
       autoscale and scale label (ADR 0012); long labels clipped before the value; fixtures
       from two machines (`linux-6.18-x86_64-20cpu`, `linux-6.18.18-manjaro-28cpu`)
-- [ ] Disk I/O (`/proc/diskstats`)
+- [x] Disk I/O (`/proc/diskstats`): `sensors/diskstats` (+ fuzzer), `sensors/rate`
+      (`counterRate` shared with network), `DiskMonitor` (device-backed whole disks,
+      per-disk and aggregate read/write bytes/s), one aggregate "Disk" panel (read + write
+      stacked, autoscaled). Per-disk panels come with M3 config
 - [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)
 - [ ] Battery (`/sys/class/power_supply`)
 - [ ] Filesystems (`statvfs` on `/proc/mounts` entries)
@@ -87,8 +90,10 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 M2 in progress, one monitor per branch with the `new-monitor` skill (fixtures from ≥ 2
 machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel):
 
-1. Disk I/O (`/proc/diskstats`): read/write bytes per second per whole disk (skip
-   partitions, loop/ram devices), reusing `counterRate` and ChartScale::Auto (ADR 0012).
-Open questions: interfaces that appear
-after startup (USB tethering, VPN) are not shown — revisit with M3 config; per-CPU charts
-as a config option in M3; swap panel when swap is enabled after startup.
+1. hwmon temperatures/fans (`/sys/class/hwmon`): first sysfs source — many small files
+   (one `ProcFile` per sensor, discovered at startup), `MetricUnit::Celsius`, a chart scale
+   for temperatures (fixed 0–100 °C or autoscale: decide), header "CPU 54°C".
+2. Pending fixtures: a second machine's `/proc/diskstats` (maintainer's Manjaro box).
+Open questions: devices that appear after startup (USB disks/NICs) are not shown — revisit
+with M3 config; per-CPU / per-disk charts as config options in M3; swap panel when swap
+is enabled after startup.

@@ -105,12 +105,4 @@ std::optional<NetDev> parseNetDev(std::string_view text)
     return dev;
 }
 
-double counterRate(std::uint64_t previous, std::uint64_t current, double seconds)
-{
-    if (current < previous || !(seconds > 0.0)) {
-        return 0.0;
-    }
-    return static_cast<double>(current - previous) / seconds;
-}
-
 } // namespace qk::sensors

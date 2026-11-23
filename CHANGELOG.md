@@ -27,6 +27,9 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- Disk I/O monitor (M2): `/proc/diskstats` parser (+ fuzzer), `DiskMonitor` (whole disks
+  backed by a device; per-disk and aggregate read/write bytes/s), aggregate "Disk" panel
+  with read + write stacked and autoscaled. `counterRate` moved to `sensors/rate.h`.
 - Network monitor (M2): `/proc/net/dev` parser (+ fuzzer), `counterRate`, `NetMonitor`
   (device-backed interfaces, monotonic-clock rates), one panel per interface with rx/tx
   stacked and a power-of-two autoscaled chart labelled with its scale (ADR 0012, accepted);

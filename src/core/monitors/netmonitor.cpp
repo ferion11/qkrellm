@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/monitors/netmonitor.h"
 
+#include "sensors/rate.h"
+
 #include <sys/stat.h>
 
 namespace qk::core {

@@ -56,6 +56,7 @@ History: `/tmp/qkrellm/bench/results.tsv` (date, commit, startup, private, pss, 
 | xcb | 43 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 0 ‰ |
 | xcb, + Swap panel | 36 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 1 ‰ |
 | xcb, 70 px, + 2 network panels | 35 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 1 ‰ |
+| xcb, + Disk panel | 42 ms | 2.7 MiB | 12.7 MiB | 32 MiB | 1 ‰ |
 
 M0 findings (before bitmap text):
 - ~41 MiB of RSS is file-backed and shared: libQt6Gui/Widgets/Core (~17 MiB),

@@ -2,7 +2,8 @@
 
 Contents (ADR 0005): `textscan` (shared allocation-free tokenizing), `procstat` (parser of
 /proc/stat), `cpuusage` (deltas between samples), `meminfo` (parser of /proc/meminfo + usage
-derivation), `netdev` (parser of /proc/net/dev + `counterRate`), `ProcFile` (the only I/O: open once,
+derivation), `netdev` (parser of /proc/net/dev), `diskstats` (parser of
+/proc/diskstats), `rate` (`counterRate` for monotonically increasing counters), `ProcFile` (the only I/O: open once,
 `pread`). Library `qkrellm_sensors` links **no Qt**. Rules:
 
 ## Split parsing from I/O

@@ -4,6 +4,8 @@
 add_library(qkrellm_sensors STATIC
     cpuusage.cpp
     cpuusage.h
+    diskstats.cpp
+    diskstats.h
     meminfo.cpp
     meminfo.h
     netdev.cpp
@@ -12,6 +14,8 @@ add_library(qkrellm_sensors STATIC
     procfile.h
     procstat.cpp
     procstat.h
+    rate.cpp
+    rate.h
     textscan.cpp
     textscan.h)
 set_target_properties(qkrellm_sensors PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)

@@ -2,6 +2,7 @@
 #include "app/startupprobe.h"
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
+#include "core/monitors/diskmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
 #include "core/sampler.h"
@@ -45,6 +46,10 @@ int main(int argc, char* argv[])
     if (!cpu->isValid()) {
         qWarning("qkrellm: cannot read /proc/stat; CPU monitor disabled");
     }
+    auto disk = std::make_unique<qk::core::DiskMonitor>(registry);
+    if (!disk->isValid()) {
+        qWarning("qkrellm: cannot read /proc/diskstats; disk monitor disabled");
+    }
     auto net = std::make_unique<qk::core::NetMonitor>(registry);
     if (!net->isValid()) {
         qWarning("qkrellm: cannot read /proc/net/dev; network monitor disabled");
@@ -85,6 +90,19 @@ int main(int argc, char* argv[])
             .series = {{.metric = mem->swapUsed(), .color = theme.seriesSecondary}},
         });
     }
+    if (!disk->disks().empty()) {
+        window.addPanel({
+            .label = QStringLiteral("Disk"),
+            .valueMetric = disk->total(),
+            .valueFormat = qk::ui::ValueFormat::Bytes,
+            .series =
+                {
+                    {.metric = disk->read(), .color = theme.seriesPrimary},
+                    {.metric = disk->write(), .color = theme.seriesSecondary},
+                },
+            .chartScale = qk::ui::ChartScale::Auto,
+        });
+    }
     for (const auto& itf : net->interfaces()) {
         window.addPanel({
             .label = QString::fromStdString(itf.name),
@@ -100,6 +118,7 @@ int main(int argc, char* argv[])
     }
     sampler.addMonitor(std::move(cpu));
     sampler.addMonitor(std::move(mem));
+    sampler.addMonitor(std::move(disk));
     sampler.addMonitor(std::move(net));
     QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, &qk::ui::MainWindow::refresh);
 
