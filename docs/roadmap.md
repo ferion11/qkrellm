@@ -50,7 +50,11 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       fixtures `linux-6.18-x86_64-20cpu` (no swap) and `…-20cpu-swap` (2 GiB swap file)
 - [x] Default width 70 px (maintainer's GKrellM width); atlases DejaVu Sans Condensed 9 px;
       bytes header falls back to "used" when "used/total" does not fit
-- [ ] Network (`/proc/net/dev`), per-interface
+- [x] Network (`/proc/net/dev`), per-interface: `sensors/netdev` (+ fuzzer; it found NUL
+      bytes in names), `NetMonitor` (device-backed interfaces chosen at startup, rates from
+      the monotonic clock, counter resets → 0), rx + tx stacked charts with power-of-two
+      autoscale and scale label (ADR 0012, Proposed); long labels clipped before the value.
+      Only one machine's fixture so far — add a second (`net/dev`) when available
 - [ ] Disk I/O (`/proc/diskstats`)
 - [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)
 - [ ] Battery (`/sys/class/power_supply`)
@@ -83,9 +87,9 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 M2 in progress, one monitor per branch with the `new-monitor` skill (fixtures from ≥ 2
 machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel):
 
-1. Network (`/proc/net/dev`), per-interface rx/tx rates — first rate metric that is not a
-   fraction: decide chart autoscaling (e.g. per-chart max over the visible window, rounded
-   to a "nice" value, with the scale shown in the header) and record it in an ADR.
-2. Disk I/O (`/proc/diskstats`) reuses the same rate + autoscale machinery.
-Open questions: per-CPU charts (aggregate only today) as a config option in M3; whether
-the swap panel should appear when swap is enabled after startup.
+1. Disk I/O (`/proc/diskstats`): read/write bytes per second per whole disk (skip
+   partitions, loop/ram devices), reusing `counterRate` and ChartScale::Auto (ADR 0012).
+2. Pending fixtures: a second machine's `/proc/net/dev` (maintainer's Manjaro box).
+Open questions: ADR 0012 still Proposed (maintainer to accept); interfaces that appear
+after startup (USB tethering, VPN) are not shown — revisit with M3 config; per-CPU charts
+as a config option in M3; swap panel when swap is enabled after startup.

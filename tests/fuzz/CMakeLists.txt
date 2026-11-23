@@ -15,7 +15,8 @@ function(qk_add_fuzzer name)
     set_target_properties(${name} PROPERTIES AUTOMOC OFF)
 endfunction()
 
-# Seeds: tests/fixtures (procstat, meminfo) and src/ui/fonts (textatlas); scripts/fuzz.sh runs them.
+# Seeds: tests/fixtures (procstat, meminfo, netdev) and src/ui/fonts (textatlas); scripts/fuzz.sh runs them.
 qk_add_fuzzer(fuzz_procstat SOURCES fuzz_procstat.cpp LIBS qkrellm_sensors)
 qk_add_fuzzer(fuzz_meminfo SOURCES fuzz_meminfo.cpp LIBS qkrellm_sensors)
+qk_add_fuzzer(fuzz_netdev SOURCES fuzz_netdev.cpp LIBS qkrellm_sensors)
 qk_add_fuzzer(fuzz_textatlas SOURCES fuzz_textatlas.cpp LIBS qkrellm_ui)

@@ -2,10 +2,12 @@
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/memorymonitor.h"
+#include "core/monitors/netmonitor.h"
 #include "core/sampler.h"
 #include "sensors/cpuusage.h"
 #include "sensors/procstat.h"
 
+#include <QDir>
 #include <QFile>
 #include <QObject>
 #include <QSignalSpy>
@@ -81,6 +83,7 @@ using qk::core::MemoryMonitor;
 using qk::core::MetricRegistry;
 using qk::core::MetricUnit;
 using qk::core::Monitor;
+using qk::core::NetMonitor;
 using qk::core::Sampler;
 
 QString fixtureDir()
@@ -234,6 +237,70 @@ private slots:
         QVERIFY(registry.history(mem.used()).empty());
     }
 
+    void netMonitorRatesFromFixtures()
+    {
+        const QByteArray t0 = readFile(fixtureDir() + QStringLiteral("net/dev"));
+        const QByteArray t1 = readFile(fixtureDir() + QStringLiteral("net/dev.1s"));
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("dev"));
+        // Fake /sys/class/net: only wlan0 has a device link -> eth0 (no device), lo skipped.
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("sys/wlan0/device")));
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("sys/eth0")));
+        QVERIFY(rewrite(path, t0));
+
+        MetricRegistry registry(8);
+        NetMonitor net(registry, qPrintable(path), qPrintable(dir.filePath(QStringLiteral("sys"))));
+        QVERIFY(net.isValid());
+        QCOMPARE(net.interfaces().size(), std::size_t{1});
+        const auto& wlan = net.interfaces().front();
+        QCOMPARE(wlan.name, std::string("wlan0"));
+        QCOMPARE(registry.info(wlan.rx).id, std::string("net.wlan0.rx"));
+        QCOMPARE(registry.info(wlan.total).unit, MetricUnit::BytesPerSecond);
+
+        QVERIFY(rewrite(path, t1));
+        const auto start = NetMonitor::Clock::now();
+        // Elapsed time comes from the monotonic clock: 2 s since construction halves rates.
+        net.sampleAt(start + std::chrono::seconds(2));
+        const float rx = registry.history(wlan.rx).latest();
+        const float tx = registry.history(wlan.tx).latest();
+        QVERIFY(rx > 0.0F && rx <= 504.0F / 2.0F);
+        QVERIFY(tx > 0.0F && tx <= 432.0F / 2.0F);
+        QCOMPARE(registry.history(wlan.total).latest(), rx + tx);
+
+        // Exactly one second later with identical counters: zero rates.
+        net.sampleAt(start + std::chrono::seconds(3));
+        QCOMPARE(registry.history(wlan.rx).latest(), 0.0F);
+
+        // Counter reset (smaller values): 0, not a huge bogus rate.
+        QVERIFY(rewrite(path, t0));
+        net.sampleAt(start + std::chrono::seconds(4));
+        QCOMPARE(registry.history(wlan.rx).latest(), 0.0F);
+        QCOMPARE(registry.history(wlan.tx).latest(), 0.0F);
+    }
+
+    void netMonitorFallsBackToVirtualInterfaces()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("dev"));
+        QVERIFY(rewrite(path, readFile(fixtureDir() + QStringLiteral("net/dev"))));
+        MetricRegistry registry(8);
+        // No sysfs at all (e.g. a container): every interface but lo.
+        NetMonitor net(registry, qPrintable(path), "/nonexistent/qkrellm/sys");
+        QCOMPARE(net.interfaces().size(), std::size_t{2});
+        QCOMPARE(net.interfaces()[0].name, std::string("eth0"));
+        QCOMPARE(net.interfaces()[1].name, std::string("wlan0"));
+    }
+
+    void netMonitorSurvivesMissingFile()
+    {
+        MetricRegistry registry(8);
+        NetMonitor net(registry, "/nonexistent/qkrellm/dev");
+        QVERIFY(!net.isValid());
+        QVERIFY(net.interfaces().empty());
+        net.sample(); // must not crash
+        QCOMPARE(registry.size(), std::size_t{0});
+    }
+
     void samplerHonoursPeriodsAndSignals()
     {
         Sampler sampler(std::chrono::milliseconds(1000));
@@ -276,6 +343,9 @@ private slots:
         auto mem = std::make_unique<MemoryMonitor>(registry, "/proc/meminfo");
         QVERIFY(mem->isValid());
         sampler.addMonitor(std::move(mem));
+        auto net = std::make_unique<NetMonitor>(registry); // real /proc/net/dev + sysfs
+        QVERIFY(net->isValid());
+        sampler.addMonitor(std::move(net));
         int observed = 0;
         connect(&sampler, &Sampler::sampled, this, [&observed] { ++observed; });
 

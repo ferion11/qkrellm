@@ -18,6 +18,8 @@
 using qk::core::MetricRegistry;
 using qk::core::MetricUnit;
 using qk::ui::BitmapTextRenderer;
+using qk::ui::chartAutoScale;
+using qk::ui::ChartScale;
 using qk::ui::ChartWidget;
 using qk::ui::formatBytes;
 using qk::ui::formatBytesOf;
@@ -195,6 +197,75 @@ private slots:
         QCOMPARE(image.pixelColor(8, 40 - 25), theme.chartBackground);
         // No data further left: background (or the 50 % guide line).
         QCOMPARE(image.pixelColor(7, 39), theme.chartBackground);
+    }
+
+    void autoScaleIsPowerOfTwoCeiling()
+    {
+        QCOMPARE(chartAutoScale(0.0), 1024.0); // floor: 1 KiB
+        QCOMPARE(chartAutoScale(-5.0), 1024.0);
+        QCOMPARE(chartAutoScale(std::numeric_limits<double>::quiet_NaN()), 1024.0);
+        QCOMPARE(chartAutoScale(1024.0), 1024.0);
+        QCOMPARE(chartAutoScale(1025.0), 2048.0);
+        QCOMPARE(chartAutoScale(3.0 * 1024 * 1024), 4.0 * 1024 * 1024);
+        QVERIFY(std::isfinite(chartAutoScale(std::numeric_limits<double>::infinity())));
+    }
+
+    void autoScaledChartUsesVisibleStackedMaximum()
+    {
+        Theme theme;
+        theme.chartHeight = 32;
+        MetricRegistry registry(16);
+        const auto rx =
+            registry.add({.id = "rx", .label = "rx", .unit = MetricUnit::BytesPerSecond});
+        const auto tx =
+            registry.add({.id = "tx", .label = "tx", .unit = MetricUnit::BytesPerSecond});
+        // Oldest -> newest. Stacked maxima: 6000 (old, scrolled out of a 2-column chart),
+        // then 1500 and 3000 -> visible max 3000 -> scale 4096 (not 8192).
+        registry.push(rx, 5000.0F);
+        registry.push(tx, 1000.0F);
+        registry.push(rx, 1000.0F);
+        registry.push(tx, 500.0F);
+        registry.push(rx, 2048.0F);
+        registry.push(tx, 952.0F);
+        ChartWidget chart(registry,
+                          {{.metric = rx, .color = Qt::red}, {.metric = tx, .color = Qt::green}},
+                          theme, ChartScale::Auto);
+        chart.resize(2, theme.chartHeight);
+        const QImage image = chart.grab().toImage();
+        QCOMPARE(chart.lastScale(), 4096.0);
+        QCOMPARE(barHeight(image, 1, Qt::red), 16); // 2048 / 4096 of 32 px
+        QCOMPARE(image.pixelColor(1, 32 - 16 - 1), QColor(Qt::green));
+        QCOMPARE(barHeight(image, 0, Qt::red), 8); // 1000 / 4096 * 32 = 7.8 -> 8
+
+        chart.resize(3, theme.chartHeight); // the 6000 peak is visible again
+        (void)chart.grab();
+        QCOMPARE(chart.lastScale(), 8192.0);
+    }
+
+    void longLabelIsClippedBeforeValue()
+    {
+        MetricRegistry registry(8);
+        const auto rate = registry.add({.id = "r", .label = "r", .unit = MetricUnit::Bytes});
+        registry.push(rate, 999.0F * 1024 * 1024);
+        const auto r = BitmapTextRenderer::load(QStringLiteral(":/qkrellm/fonts/default"), 1.0);
+        QVERIFY(r);
+        const Theme theme;
+        qk::ui::Panel panel(registry,
+                            {
+                                .label = QStringLiteral("enp0s20f0u1u2"),
+                                .valueMetric = rate,
+                                .valueFormat = qk::ui::ValueFormat::Bytes,
+                            },
+                            *r, theme);
+        panel.resize(theme.panelWidth, panel.sizeHint().height());
+        const QImage image = panel.grab().toImage();
+        // A clear column of background separates the clipped label from the value.
+        const int valueLeft = theme.panelWidth - theme.panelPadding - r->horizontalAdvance(u"999M");
+        for (int x = valueLeft - theme.panelPadding; x < valueLeft; ++x) {
+            for (int y = 0; y < image.height(); ++y) {
+                QCOMPARE(image.pixelColor(x, y), theme.windowBackground);
+            }
+        }
     }
 
     void chartClipsStackAtTop()

@@ -6,6 +6,8 @@ add_library(qkrellm_sensors STATIC
     cpuusage.h
     meminfo.cpp
     meminfo.h
+    netdev.cpp
+    netdev.h
     procfile.cpp
     procfile.h
     procstat.cpp

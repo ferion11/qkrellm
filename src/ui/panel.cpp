@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <utility>
 
 namespace qk::ui {
@@ -29,7 +30,8 @@ Panel::Panel(const core::MetricRegistry& registry, PanelSpec spec, const TextRen
     layout->setContentsMargins(0, headerHeight(), 0, 0);
     layout->setSpacing(0);
     if (!spec.series.empty()) {
-        m_chart = new ChartWidget(registry, std::move(spec.series), theme, this);
+        m_chart =
+            new ChartWidget(registry, std::move(spec.series), theme, spec.chartScale, &text, this);
         layout->addWidget(m_chart);
     }
 }
@@ -60,32 +62,35 @@ void Panel::paintEvent(QPaintEvent* /*event*/)
     painter.fillRect(0, 0, width(), header, m_theme->windowBackground);
 
     const int pad = m_theme->panelPadding;
-    m_text->draw(painter, QPoint(pad, pad), m_label, m_theme->dimText);
+    int labelRight = width() - pad; // the label is clipped so it never runs under the value
 
-    if (!m_valueMetric) {
-        return;
-    }
-    TextBuffer buffer{};
-    QStringView value;
-    switch (m_valueFormat) {
-    case ValueFormat::Percent:
-        value = formatPercent(buffer, latest(m_valueMetric));
-        break;
-    case ValueFormat::Bytes:
-        if (m_totalMetric) {
-            value = formatBytesOf(buffer, latest(m_valueMetric), latest(m_totalMetric));
-            // Narrow panel: "used/total" would collide with the label -> just "used".
-            const int room = width() - (3 * pad) - m_text->horizontalAdvance(m_label);
-            if (m_text->horizontalAdvance(value) > room) {
+    if (m_valueMetric) {
+        TextBuffer buffer{};
+        QStringView value;
+        switch (m_valueFormat) {
+        case ValueFormat::Percent:
+            value = formatPercent(buffer, latest(m_valueMetric));
+            break;
+        case ValueFormat::Bytes:
+            if (m_totalMetric) {
+                value = formatBytesOf(buffer, latest(m_valueMetric), latest(m_totalMetric));
+                // Narrow panel: "used/total" would collide with the label -> just "used".
+                const int room = width() - (3 * pad) - m_text->horizontalAdvance(m_label);
+                if (m_text->horizontalAdvance(value) > room) {
+                    value = formatBytes(buffer, latest(m_valueMetric));
+                }
+            } else {
                 value = formatBytes(buffer, latest(m_valueMetric));
             }
-        } else {
-            value = formatBytes(buffer, latest(m_valueMetric));
+            break;
         }
-        break;
+        const int valueLeft = width() - pad - m_text->horizontalAdvance(value);
+        m_text->draw(painter, QPoint(valueLeft, pad), value, m_theme->text);
+        labelRight = valueLeft - pad;
     }
-    m_text->draw(painter, QPoint(width() - pad - m_text->horizontalAdvance(value), pad), value,
-                 m_theme->text);
+
+    painter.setClipRect(0, 0, std::max(labelRight, 0), header);
+    m_text->draw(painter, QPoint(pad, pad), m_label, m_theme->dimText);
 }
 
 std::optional<float> Panel::latest(std::optional<core::MetricHandle> metric) const

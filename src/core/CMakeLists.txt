@@ -10,6 +10,8 @@ add_library(qkrellm_core STATIC
     monitors/cpumonitor.h
     monitors/memorymonitor.cpp
     monitors/memorymonitor.h
+    monitors/netmonitor.cpp
+    monitors/netmonitor.h
     ringbuffer.h
     sampler.cpp
     sampler.h

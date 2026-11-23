@@ -16,3 +16,4 @@ Create new ones with the `adr` skill (or copy `0000-template.md`) and add a row 
 | [0009](0009-no-gkrellm-compatibility.md) | No GKrellM theme or gkrellmd protocol compatibility | Accepted |
 | [0010](0010-out-of-tree-builds-in-tmp.md) | All local build/test/bench output lives in /tmp/qkrellm | Accepted |
 | [0011](0011-bitmap-text-by-default.md) | Panels use bitmap glyph atlases; system fonts opt-in | Accepted |
+| [0012](0012-chart-autoscale-power-of-two.md) | Rate charts autoscale to a power-of-two ceiling | Proposed |

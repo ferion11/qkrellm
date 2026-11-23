@@ -32,6 +32,7 @@ struct PanelSpec
     ValueFormat valueFormat = ValueFormat::Percent;
     std::optional<core::MetricHandle> totalMetric{}; ///< Bytes only: appended as "/total"
     std::vector<ChartSeries> series{};               ///< empty = header only
+    ChartScale chartScale = ChartScale::Fraction;
 };
 // NOLINTEND(readability-redundant-member-init)
 

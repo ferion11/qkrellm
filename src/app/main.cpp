@@ -3,6 +3,7 @@
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/memorymonitor.h"
+#include "core/monitors/netmonitor.h"
 #include "core/sampler.h"
 #include "core/version.h"
 #include "ui/mainwindow.h"
@@ -44,6 +45,10 @@ int main(int argc, char* argv[])
     if (!cpu->isValid()) {
         qWarning("qkrellm: cannot read /proc/stat; CPU monitor disabled");
     }
+    auto net = std::make_unique<qk::core::NetMonitor>(registry);
+    if (!net->isValid()) {
+        qWarning("qkrellm: cannot read /proc/net/dev; network monitor disabled");
+    }
     auto mem = std::make_unique<qk::core::MemoryMonitor>(registry);
     if (!mem->isValid()) {
         qWarning("qkrellm: cannot read /proc/meminfo; memory monitor disabled");
@@ -80,8 +85,22 @@ int main(int argc, char* argv[])
             .series = {{.metric = mem->swapUsed(), .color = theme.seriesSecondary}},
         });
     }
+    for (const auto& itf : net->interfaces()) {
+        window.addPanel({
+            .label = QString::fromStdString(itf.name),
+            .valueMetric = itf.total,
+            .valueFormat = qk::ui::ValueFormat::Bytes,
+            .series =
+                {
+                    {.metric = itf.rx, .color = theme.seriesPrimary},
+                    {.metric = itf.tx, .color = theme.seriesSecondary},
+                },
+            .chartScale = qk::ui::ChartScale::Auto,
+        });
+    }
     sampler.addMonitor(std::move(cpu));
     sampler.addMonitor(std::move(mem));
+    sampler.addMonitor(std::move(net));
     QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, &qk::ui::MainWindow::refresh);
 
     if (parser.isSet(exitAfterFirstPaint)) {
