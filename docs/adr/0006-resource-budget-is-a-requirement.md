@@ -1,6 +1,6 @@
 # 0006 — The resource budget is a tested requirement
 
-- **Status:** Accepted
+- **Status:** Accepted (idle-CPU limit amended by [0013](0013-idle-cpu-budget-2-permille.md))
 - **Date:** 2026-11-22
 
 ## Context

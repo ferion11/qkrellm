@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Bash
 ---
 
 You guard qkrellm's resource budget (ADR 0006, `docs/resource-budget.md`): private memory
-≤ 16 MiB, idle CPU ≤ 0.1 %, startup ≤ 150 ms, Qt Core/Gui/Widgets only, zero heap
+≤ 16 MiB, idle CPU ≤ 0.2 % (ADR 0013), startup ≤ 150 ms, Qt Core/Gui/Widgets only, zero heap
 allocations in the sampling hot path.
 
 Review the diff (`git diff main...HEAD` plus unstaged `git diff`). Look for:

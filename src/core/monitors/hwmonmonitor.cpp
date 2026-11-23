@@ -74,7 +74,11 @@ void HwmonMonitor::sample()
             const auto start = std::chrono::steady_clock::now();
             read(a);
             const auto spent = std::chrono::steady_clock::now() - start;
-            a.period = spent > m_slowThreshold ? kSlowPeriodTicks : 1;
+            if (spent > kVerySlowFactor * m_slowThreshold) {
+                a.period = kVerySlowPeriodTicks;
+            } else {
+                a.period = spent > m_slowThreshold ? kSlowPeriodTicks : 1;
+            }
         } else if (m_tick % static_cast<std::uint64_t>(a.period) == 0) {
             read(a);
         }

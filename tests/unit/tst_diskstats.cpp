@@ -11,6 +11,7 @@
 
 using qk::sensors::DiskStat;
 using qk::sensors::DiskStats;
+using qk::sensors::parseBlockStat;
 using qk::sensors::parseDiskStats;
 
 namespace {
@@ -123,6 +124,24 @@ private slots:
         QCOMPARE(s->count, std::size_t{1});
         QCOMPARE(s->devices[0].name(), std::string_view("ok"));
         QCOMPARE(s->devices[0].sectorsRead, 3U);
+    }
+
+    void parsesSysBlockStat()
+    {
+        // /sys/block/nvme0n1/stat: the diskstats fields without "major minor name".
+        const auto s =
+            parseBlockStat("   29632    13822  3989878    14445      152      166     2674"
+                           "      966        0     9210    15432        0        0"
+                           "        0        0       19       19\n");
+        QVERIFY(s);
+        QCOMPARE(s->readsCompleted, 29632U);
+        QCOMPARE(s->sectorsRead, 3989878U);
+        QCOMPARE(s->writesCompleted, 152U);
+        QCOMPARE(s->sectorsWritten, 2674U);
+        QVERIFY(parseBlockStat("1 2 3 4 5 6 7 8 9 10 11"));
+        QVERIFY(!parseBlockStat("1 2 3 4 5 6 7 8 9 10"));
+        QVERIFY(!parseBlockStat("1 2 3 4 5 6 7 8 9 10 x"));
+        QVERIFY(!parseBlockStat(""));
     }
 
     void emptyAndTruncated()

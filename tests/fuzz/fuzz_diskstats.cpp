@@ -12,6 +12,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     const std::string_view text(reinterpret_cast<const char*>(data), size);
     static qk::sensors::DiskStats stats; // ~14 KiB: static, not on the stack
     stats = qk::sensors::parseDiskStats(text);
+    (void)qk::sensors::parseBlockStat(text);
     if (stats.count > qk::sensors::DiskStats::kMaxDevices) {
         std::abort();
     }

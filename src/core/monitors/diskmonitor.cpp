@@ -1,13 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/monitors/diskmonitor.h"
 
+#include "sensors/diskstats.h"
 #include "sensors/rate.h"
 
+#include <algorithm>
+#include <memory>
+#include <string_view>
+
+#include <dirent.h>
 #include <sys/stat.h>
 
 namespace qk::core {
 
 namespace {
+
+constexpr std::size_t kStatCapacity = 512; // one line of ~17 numbers
 
 bool exists(const std::string& path)
 {
@@ -15,12 +23,39 @@ bool exists(const std::string& path)
     return ::stat(path.c_str(), &st) == 0;
 }
 
+std::string join(std::string_view a, std::string_view b, std::string_view c = {})
+{
+    std::string path;
+    path.reserve(a.size() + b.size() + c.size() + 1);
+    path += a;
+    path += '/';
+    path += b;
+    path += c;
+    return path;
+}
+
+std::vector<std::string> listDir(const std::string& path)
+{
+    std::vector<std::string> names;
+    const std::unique_ptr<DIR, int (*)(DIR*)> dir(::opendir(path.c_str()), ::closedir);
+    if (!dir) {
+        return names;
+    }
+    // Startup-only and single-threaded: readdir's static state is not shared.
+    while (const dirent* entry = ::readdir(dir.get())) { // NOLINT(concurrency-mt-unsafe)
+        const std::string_view name(entry->d_name);
+        if (!name.starts_with('.')) {
+            names.emplace_back(name);
+        }
+    }
+    std::ranges::sort(names);
+    return names;
+}
+
 } // namespace
 
-DiskMonitor::DiskMonitor(MetricRegistry& registry, const char* path, const char* sysBlock)
+DiskMonitor::DiskMonitor(MetricRegistry& registry, const std::string& sysBlock)
     : m_registry(&registry)
-    , m_file(path, std::size_t{8} * 1024)
-    , m_current(std::make_unique<sensors::DiskStats>())
     , m_read(registry.add(
           {.id = "disk.read", .label = "Disk read", .unit = MetricUnit::BytesPerSecond}))
     , m_write(registry.add(
@@ -29,32 +64,28 @@ DiskMonitor::DiskMonitor(MetricRegistry& registry, const char* path, const char*
           registry.add({.id = "disk.total", .label = "Disk", .unit = MetricUnit::BytesPerSecond}))
     , m_previousTime(Clock::now())
 {
-    if (!readInto(*m_current)) {
-        return;
-    }
-    m_valid = true;
-    const sensors::DiskStats& stats = *m_current;
-    const std::string block(sysBlock);
-
-    std::vector<std::size_t> chosen;
-    for (std::size_t i = 0; i < stats.count; ++i) {
-        if (exists(block + "/" + std::string(stats.devices.at(i).name()) + "/device")) {
-            chosen.push_back(i);
+    const std::vector<std::string> entries = listDir(sysBlock);
+    std::vector<std::string> chosen;
+    for (const std::string& name : entries) {
+        if (exists(join(sysBlock, name, "/device"))) {
+            chosen.push_back(name);
         }
     }
     if (chosen.empty()) {
-        for (std::size_t i = 0; i < stats.count; ++i) {
-            const auto name = stats.devices.at(i).name();
-            if (!name.starts_with("loop") && !name.starts_with("ram") &&
-                exists(block + "/" + std::string(name))) {
-                chosen.push_back(i);
+        for (const std::string& name : entries) {
+            if (!name.starts_with("loop") && !name.starts_with("ram")) {
+                chosen.push_back(name);
             }
         }
     }
 
-    for (const std::size_t i : chosen) {
-        const sensors::DiskStat& d = stats.devices.at(i);
-        const std::string name(d.name());
+    for (const std::string& name : chosen) {
+        sensors::ProcFile file(join(sysBlock, name, "/stat").c_str(), kStatCapacity);
+        const auto text = file.read();
+        const auto stat = text ? sensors::parseBlockStat(*text) : std::nullopt;
+        if (!stat) {
+            continue; // no readable stat: not a disk we can follow
+        }
         m_disks.push_back({
             .name = name,
             .read = registry.add({
@@ -68,25 +99,16 @@ DiskMonitor::DiskMonitor(MetricRegistry& registry, const char* path, const char*
                 .unit = MetricUnit::BytesPerSecond,
             }),
         });
+        m_files.push_back(std::move(file));
         m_previous.push_back({
-            .sectorsRead = d.sectorsRead,
-            .sectorsWritten = d.sectorsWritten,
+            .sectorsRead = stat->sectorsRead,
+            .sectorsWritten = stat->sectorsWritten,
             .present = true,
         });
     }
 }
 
 DiskMonitor::~DiskMonitor() = default;
-
-bool DiskMonitor::readInto(sensors::DiskStats& out)
-{
-    const auto text = m_file.read();
-    if (!text) {
-        return false;
-    }
-    out = sensors::parseDiskStats(*text);
-    return true;
-}
 
 void DiskMonitor::sample()
 {
@@ -95,8 +117,8 @@ void DiskMonitor::sample()
 
 void DiskMonitor::sampleAt(Clock::time_point now)
 {
-    if (!m_valid || !readInto(*m_current)) {
-        return; // charts simply get no new point
+    if (m_disks.empty()) {
+        return;
     }
     const double seconds = std::chrono::duration<double>(now - m_previousTime).count();
     m_previousTime = now;
@@ -106,21 +128,21 @@ void DiskMonitor::sampleAt(Clock::time_point now)
     double writeSum = 0.0;
     for (std::size_t k = 0; k < m_disks.size(); ++k) {
         Counters& previous = m_previous[k];
-        const auto index = m_current->find(m_disks[k].name);
+        const auto text = m_files[k].read();
+        const auto current = text ? sensors::parseBlockStat(*text) : std::nullopt;
         double read = 0.0;
         double write = 0.0;
-        if (index) {
-            const sensors::DiskStat& current = m_current->devices.at(*index);
+        if (current) {
             if (previous.present) {
-                read = sensors::counterRate(previous.sectorsRead, current.sectorsRead, seconds) *
+                read = sensors::counterRate(previous.sectorsRead, current->sectorsRead, seconds) *
                        kSector;
-                write =
-                    sensors::counterRate(previous.sectorsWritten, current.sectorsWritten, seconds) *
-                    kSector;
+                write = sensors::counterRate(previous.sectorsWritten, current->sectorsWritten,
+                                             seconds) *
+                        kSector;
             }
             previous = {
-                .sectorsRead = current.sectorsRead,
-                .sectorsWritten = current.sectorsWritten,
+                .sectorsRead = current->sectorsRead,
+                .sectorsWritten = current->sectorsWritten,
                 .present = true,
             };
         } else {

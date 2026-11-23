@@ -6,6 +6,8 @@ add_library(qkrellm_core STATIC
     metricregistry.cpp
     metricregistry.h
     monitor.h
+    monitors/batterymonitor.cpp
+    monitors/batterymonitor.h
     monitors/cpumonitor.cpp
     monitors/cpumonitor.h
     monitors/diskmonitor.cpp

@@ -8,6 +8,11 @@ All notable changes to this project are documented here. Format:
 ## [Unreleased]
 
 ### Changed
+- Idle CPU budget 1 → 2 ‰ with the default monitor set (ADR 0013, amends 0006);
+  `benchmarks/measure.sh` measures CPU exactly from schedstat (clock ticks rounded down had
+  hidden overruns). Disks are read from /sys/block/<disk>/stat (`parseBlockStat`); battery
+  every 10 s; hwmon inputs slower than 0.5 ms every 30 s.
+- `scripts/lint.sh` also lints new, not yet tracked files.
 - Default panel width 120 → 70 px (as commonly used with GKrellM); panel text atlases are
   now DejaVu Sans Condensed 9 px (was DejaVu Sans 11 px). A bytes header that does not fit
   ("7.1G/62G") falls back to the used value alone.
@@ -27,11 +32,18 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- Battery monitor (M2): power_supply uevent parser and `estimateBattery` (+ fuzzer),
+  `BatteryMonitor`, "Bat 65% 1:23" row (label "AC" on mains); dynamic panel texts
+  (`PanelSpec::labelText` / `valueText`); `tests/fixtures/capture-sys.sh` (was
+  capture-hwmon.sh) also captures power_supply.
+- Rendering: panel headers repaint only when their text changes; charts skip identical
+  frames and otherwise scroll one column (`QWidget::scroll`) instead of redrawing;
+  `RingBuffer::pushes()`.
 - hwmon monitor (M2): sysfs integer parser (+ fuzzer), hwmon discovery, `HwmonMonitor`
   reading only the sensors shown (slow ones, timed on first read, every 10 s); "Temp" panel with the CPU temperature (coretemp/k10temp/
   zenpower/cpu_thermal) on a fixed 0–100 °C chart, header-only rows for other chips and
   fans; `ChartScale::Fixed` (replaces `Fraction`), "°C"/"rpm" formatters, `MetricUnit::Rpm`,
-  `tests/fixtures/capture-hwmon.sh`; sysfs fixtures kept byte-exact like /proc ones.
+  `tests/fixtures/capture-sys.sh`; sysfs fixtures kept byte-exact like /proc ones.
 - Disk I/O monitor (M2): `/proc/diskstats` parser (+ fuzzer), `DiskMonitor` (whole disks
   backed by a device; per-disk and aggregate read/write bytes/s), aggregate "Disk" panel
   with read + write stacked and autoscaled. `counterRate` moved to `sensors/rate.h`.

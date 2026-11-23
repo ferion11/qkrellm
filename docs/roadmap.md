@@ -64,8 +64,15 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       are read; first read is timed and sensors slower than 100 µs — Asus WMI fans, NVMe —
       are read every 10 s), CPU temperature chart panel
       (fixed 0–100 °C, `ChartScale::Fixed`) + header-only rows for other chips and fans;
-      `tests/fixtures/capture-hwmon.sh`. Voltages left out (battery comes from power_supply)
-- [ ] Battery (`/sys/class/power_supply`)
+      `tests/fixtures/capture-sys.sh`. Voltages left out (battery comes from power_supply)
+- [x] Battery (`/sys/class/power_supply`): uevent parser + `estimateBattery` (energy or
+      charge family, several batteries, peripheral batteries ignored; + fuzzer),
+      `BatteryMonitor` (every 10 s), "Bat 65% 1:23" row whose label turns "AC" on mains;
+      `PanelSpec::labelText/valueText` dynamic texts; `tests/fixtures/capture-sys.sh`
+- [x] Budget work (ADR 0013, idle CPU ≤ 2 ‰): exact CPU measurement (schedstat), disks via
+      /sys/block, hwmon very-slow tier (30 s), header repaint only on text change, charts
+      skip identical frames and scroll by one column; `scripts/lint.sh` now lints new
+      (untracked) files too
 - [ ] Filesystems (`statvfs` on `/proc/mounts` entries)
 - [ ] Clock / uptime / load
 
@@ -93,12 +100,14 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 ## Next steps
 
 M2 in progress, one monitor per branch with the `new-monitor` skill (fixtures from ≥ 2
-machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel):
+machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel,
+`benchmarks/measure.sh` within ADR 0013's 2 ‰):
 
-1. Battery (`/sys/class/power_supply`): capacity %, status (charging/discharging), time
-   left from energy/power or charge/current; header-only panel or krell.
-2. Pending fixtures: a second machine's hwmon tree (`tests/fixtures/capture-hwmon.sh
-   linux-6.18.18-manjaro-28cpu` on the maintainer's Manjaro box → tarball).
+1. Filesystems (`statvfs` on `/proc/mounts` entries): used/total per mount, slow period.
+2. Clock / uptime / load (`/proc/uptime`, `/proc/loadavg`): uses `PanelSpec::valueText`.
+3. Pending fixtures: a second machine's sysfs tree (`tests/fixtures/capture-sys.sh
+   linux-6.18.18-manjaro-28cpu` on the maintainer's Manjaro box → tarball): hwmon +
+   power_supply.
 Open questions: devices/sensors that appear after startup are not shown — revisit with M3
 config (also: choosing which hwmon sensors to show, per-CPU / per-disk charts); swap panel
 when swap is enabled after startup.

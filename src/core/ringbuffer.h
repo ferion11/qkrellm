@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 
 namespace qk::core {
@@ -24,6 +25,7 @@ public:
         }
         m_data[m_head] = value;
         m_head = (m_head + 1) % m_capacity;
+        ++m_pushes;
         if (m_size < m_capacity) {
             ++m_size;
         }
@@ -32,6 +34,9 @@ public:
     [[nodiscard]] std::size_t size() const noexcept { return m_size; }
     [[nodiscard]] std::size_t capacity() const noexcept { return m_capacity; }
     [[nodiscard]] bool empty() const noexcept { return m_size == 0; }
+    /// Total values ever pushed (not reset by clear()): lets readers tell how many new
+    /// samples arrived since they last looked.
+    [[nodiscard]] std::uint64_t pushes() const noexcept { return m_pushes; }
 
     /// Precondition: index < size(). 0 = oldest, size() - 1 = newest.
     [[nodiscard]] const T& operator[](std::size_t index) const noexcept
@@ -53,6 +58,7 @@ private:
     std::size_t m_capacity = 0;
     std::size_t m_head = 0; // next write position
     std::size_t m_size = 0;
+    std::uint64_t m_pushes = 0;
 };
 
 } // namespace qk::core

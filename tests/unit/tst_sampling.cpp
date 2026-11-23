@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/metricregistry.h"
+#include "core/monitors/batterymonitor.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/diskmonitor.h"
 #include "core/monitors/hwmonmonitor.h"
@@ -17,6 +18,7 @@
 #include <QTest>
 
 #include <atomic>
+#include <cmath>
 #include <cstdlib>
 #include <new>
 
@@ -80,6 +82,7 @@ void operator delete[](void* p, std::size_t /*size*/) noexcept
 
 namespace {
 
+using qk::core::BatteryMonitor;
 using qk::core::CpuMonitor;
 using qk::core::DiskMonitor;
 using qk::core::HwmonMonitor;
@@ -305,27 +308,44 @@ private slots:
         QCOMPARE(registry.size(), std::size_t{0});
     }
 
+    /// Writes <dir>/block/<disk>/stat from the matching /proc/diskstats fixture line (the same
+    /// fields without "major minor name"), as /sys/block/<disk>/stat presents them.
+    static bool writeBlockStat(const QTemporaryDir& dir, const QByteArray& diskstats,
+                               const char* disk)
+    {
+        for (const QByteArray& line : diskstats.split('\n')) {
+            const QList<QByteArray> f = line.simplified().split(' ');
+            if (f.size() > 3 && f[2] == disk) {
+                return rewrite(
+                    dir.filePath(QStringLiteral("block/%1/stat").arg(QLatin1StringView(disk))),
+                    f.mid(3).join(' ') + '\n');
+            }
+        }
+        return false;
+    }
+
     void diskMonitorRatesFromFixtures()
     {
         const QByteArray t0 = readFile(fixtureDir() + QStringLiteral("diskstats"));
         const QByteArray t1 = readFile(fixtureDir() + QStringLiteral("diskstats.1s"));
         QTemporaryDir dir;
-        const QString path = dir.filePath(QStringLiteral("diskstats"));
         // Fake /sys/block: both NVMe disks have a device; loop0 does not.
         for (const char* d : {"block/nvme0n1/device", "block/nvme1n1/device", "block/loop0"}) {
             QVERIFY(QDir(dir.path()).mkpath(QLatin1StringView(d)));
         }
-        QVERIFY(rewrite(path, t0));
+        for (const char* d : {"nvme0n1", "nvme1n1", "loop0"}) {
+            QVERIFY(writeBlockStat(dir, t0, d));
+        }
 
         MetricRegistry registry(8);
-        DiskMonitor disk(registry, qPrintable(path),
-                         qPrintable(dir.filePath(QStringLiteral("block"))));
-        QVERIFY(disk.isValid());
+        DiskMonitor disk(registry, dir.filePath(QStringLiteral("block")).toStdString());
         QCOMPARE(disk.disks().size(), std::size_t{2});
-        QCOMPARE(disk.disks()[0].name, std::string("nvme1n1")); // /proc/diskstats order
-        QCOMPARE(registry.info(disk.disks()[1].write).id, std::string("disk.nvme0n1.write"));
+        QCOMPARE(disk.disks()[0].name, std::string("nvme0n1")); // sorted names
+        QCOMPARE(registry.info(disk.disks()[1].write).id, std::string("disk.nvme1n1.write"));
 
-        QVERIFY(rewrite(path, t1));
+        for (const char* d : {"nvme0n1", "nvme1n1"}) {
+            QVERIFY(writeBlockStat(dir, t1, d));
+        }
         const auto start = DiskMonitor::Clock::now();
         disk.sampleAt(start + std::chrono::seconds(1));
         // nvme1n1 wrote 3832 sectors, nvme0n1 read 256: rates <= the 1 s values (elapsed
@@ -335,31 +355,32 @@ private slots:
         QVERIFY(write > 0.9F * 3832 * 512 && write <= 3832.0F * 512);
         QVERIFY(read > 0.9F * 256 * 512 && read <= 256.0F * 512);
         QCOMPARE(registry.history(disk.total()).latest(), read + write);
-        QCOMPARE(registry.history(disk.disks()[0].write).latest(), write);
+        QCOMPARE(registry.history(disk.disks()[1].write).latest(), write);
 
-        QVERIFY(rewrite(path, t0)); // counters went back: 0, not a huge rate
+        for (const char* d : {"nvme0n1", "nvme1n1"}) {
+            QVERIFY(writeBlockStat(dir, t0, d)); // counters went back: 0, not a huge rate
+        }
         disk.sampleAt(start + std::chrono::seconds(2));
         QCOMPARE(registry.history(disk.total()).latest(), 0.0F);
     }
 
-    void diskMonitorFallbackAndMissingFile()
+    void diskMonitorFallbackAndMissingTree()
     {
+        const QByteArray t0 = readFile(fixtureDir() + QStringLiteral("diskstats"));
         QTemporaryDir dir;
-        const QString path = dir.filePath(QStringLiteral("diskstats"));
-        QVERIFY(rewrite(path, readFile(fixtureDir() + QStringLiteral("diskstats"))));
-        // No device links (e.g. some VMs): whole disks listed in /sys/block, minus loop/ram.
-        for (const char* d : {"block/nvme0n1", "block/loop0", "block/ram0"}) {
-            QVERIFY(QDir(dir.path()).mkpath(QLatin1StringView(d)));
+        // No device links (e.g. some VMs): every /sys/block entry except loop/ram.
+        for (const char* d : {"nvme0n1", "loop0", "ram0"}) {
+            QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("block/%1").arg(QLatin1StringView(d))));
+            QVERIFY(writeBlockStat(dir, t0, d));
         }
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("block/sdz"))); // no stat: skipped
         MetricRegistry registry(8);
-        DiskMonitor disk(registry, qPrintable(path),
-                         qPrintable(dir.filePath(QStringLiteral("block"))));
+        DiskMonitor disk(registry, dir.filePath(QStringLiteral("block")).toStdString());
         QCOMPARE(disk.disks().size(), std::size_t{1});
         QCOMPARE(disk.disks()[0].name, std::string("nvme0n1"));
 
         MetricRegistry other(8);
-        DiskMonitor missing(other, "/nonexistent/qkrellm/diskstats");
-        QVERIFY(!missing.isValid());
+        DiskMonitor missing(other, "/nonexistent/qkrellm/block");
         QVERIFY(missing.disks().empty());
         missing.sample(); // must not crash or push
         QVERIFY(other.history(missing.total()).empty());
@@ -409,17 +430,17 @@ private slots:
     void hwmonMonitorReadsSlowSensorsLessOften()
     {
         MetricRegistry registry(64);
-        // Threshold 0: every sensor counts as slow.
+        // Threshold 0: every sensor counts as very slow.
         HwmonMonitor hwmon(registry, QK_FIXTURES_DIR "/sys/linux-6.18-x86_64-20cpu/class/hwmon",
                            std::chrono::microseconds(0));
         const auto handle = hwmon.enable(7);
         QVERIFY(handle);
-        hwmon.sample(); // tick 0: first read, timed -> slow
-        QCOMPARE(hwmon.periodTicksOf(7), HwmonMonitor::kSlowPeriodTicks);
-        for (int i = 1; i < 2 * HwmonMonitor::kSlowPeriodTicks; ++i) {
+        hwmon.sample(); // tick 0: first read, timed -> very slow
+        QCOMPARE(hwmon.periodTicksOf(7), HwmonMonitor::kVerySlowPeriodTicks);
+        for (int i = 1; i < 2 * HwmonMonitor::kVerySlowPeriodTicks; ++i) {
             hwmon.sample();
         }
-        // Ticks 0, 10 read; 20 ticks in total.
+        // Ticks 0 and 30 read; 60 ticks in total.
         QCOMPARE(registry.history(*handle).size(), std::size_t{2});
     }
 
@@ -431,6 +452,50 @@ private slots:
         QVERIFY(!hwmon.cpuTemperature());
         QVERIFY(hwmon.defaultSelection().empty());
         hwmon.sample(); // must not crash
+    }
+
+    void batteryMonitorFromFixtureTree()
+    {
+        MetricRegistry registry(8);
+        BatteryMonitor battery(registry,
+                               QK_FIXTURES_DIR "/sys/linux-6.18-x86_64-20cpu/class/power_supply");
+        QVERIFY(battery.hasBattery());
+        QCOMPARE(battery.periodTicks(), BatteryMonitor::kPeriodTicks);
+        // Read at construction: values are there for the first paint.
+        QCOMPARE(registry.history(battery.charge()).latest(),
+                 static_cast<float>(2055000.0 / 3159000.0));
+        QCOMPARE(registry.history(battery.ac()).latest(), 1.0F);
+        QVERIFY(std::isnan(registry.history(battery.seconds()).latest()));
+        QCOMPARE(registry.history(battery.state()).latest(), 3.0F); // Idle (Not charging)
+        battery.sample();
+        QCOMPARE(registry.history(battery.charge()).size(), std::size_t{2});
+    }
+
+    void batteryMonitorDischargingAndWithoutBattery()
+    {
+        QTemporaryDir dir;
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("BAT0")));
+        QVERIFY(QDir(dir.path()).mkpath(QStringLiteral("hidpp_battery_0")));
+        QVERIFY(rewrite(dir.filePath(QStringLiteral("BAT0/uevent")),
+                        "POWER_SUPPLY_TYPE=Battery\nPOWER_SUPPLY_STATUS=Discharging\n"
+                        "POWER_SUPPLY_ENERGY_NOW=30000000\nPOWER_SUPPLY_ENERGY_FULL=60000000\n"
+                        "POWER_SUPPLY_POWER_NOW=15000000\n"));
+        QVERIFY(rewrite(dir.filePath(QStringLiteral("hidpp_battery_0/uevent")),
+                        "POWER_SUPPLY_TYPE=Battery\nPOWER_SUPPLY_SCOPE=Device\n"
+                        "POWER_SUPPLY_CAPACITY=5\n")); // a mouse: ignored
+        MetricRegistry registry(8);
+        BatteryMonitor battery(registry, dir.path().toStdString());
+        QVERIFY(battery.hasBattery());
+        QCOMPARE(registry.history(battery.charge()).latest(), 0.5F);
+        QCOMPARE(registry.history(battery.seconds()).latest(), 2.0F * 3600.0F);
+        QCOMPARE(registry.history(battery.ac()).latest(), 0.0F);
+
+        MetricRegistry other(8);
+        BatteryMonitor none(other, "/nonexistent/qkrellm/power_supply");
+        QVERIFY(!none.hasBattery());
+        none.sample(); // must not crash
+        QVERIFY(other.history(none.charge()).empty());
+        QCOMPARE(other.history(none.ac()).latest(), 0.0F);
     }
 
     void samplerHonoursPeriodsAndSignals()
@@ -475,14 +540,14 @@ private slots:
         auto mem = std::make_unique<MemoryMonitor>(registry, "/proc/meminfo");
         QVERIFY(mem->isValid());
         sampler.addMonitor(std::move(mem));
-        auto disk = std::make_unique<DiskMonitor>(registry); // real /proc/diskstats + sysfs
-        QVERIFY(disk->isValid());
+        auto disk = std::make_unique<DiskMonitor>(registry); // real /sys/block
         sampler.addMonitor(std::move(disk));
         auto hwmon = std::make_unique<HwmonMonitor>(registry); // real /sys/class/hwmon
         for (const std::size_t i : hwmon->defaultSelection()) {
             QVERIFY(hwmon->enable(i));
         }
         sampler.addMonitor(std::move(hwmon));
+        sampler.addMonitor(std::make_unique<BatteryMonitor>(registry)); // real power_supply
         auto net = std::make_unique<NetMonitor>(registry); // real /proc/net/dev + sysfs
         QVERIFY(net->isValid());
         sampler.addMonitor(std::move(net));

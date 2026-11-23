@@ -54,7 +54,7 @@ Details: [`docs/architecture.md`](docs/architecture.md).
    dirty regions. **Panel text goes through `TextRenderer`; never `QFont`/`drawText` in
    panels** — the bitmap renderer keeps startup independent of installed fonts (ADR 0011).
 3. **Resource budget** (ADR 0006, `docs/resource-budget.md`): private memory ≤ 16 MiB,
-   idle CPU ≤ 0.1 %, startup ≤ 150 ms. **No heap allocation in the sampling hot path.**
+   idle CPU ≤ 0.2 % (ADR 0013), startup ≤ 150 ms. **No heap allocation in the sampling hot path.**
 4. **Parsers are pure** (`std::string_view` → struct/`std::optional`), each with byte-exact
    fixtures and a unit test (ADR 0005, `src/sensors/AGENTS.md`).
 5. **Plugin ABI** in `include/qkrellm/` is C11, append-only, versioned; read

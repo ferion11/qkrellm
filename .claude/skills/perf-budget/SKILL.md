@@ -6,7 +6,7 @@ description: Measure qkrellm startup time, private memory, PSS/RSS and idle CPU 
 # Check the resource budget
 
 Budget (ADR 0006, `docs/resource-budget.md`, defaults in `benchmarks/budget.env`):
-private memory ≤ 16 MiB · idle CPU ≤ 0.1 % · startup ≤ 150 ms · Qt Core/Gui/Widgets only.
+private memory ≤ 16 MiB · idle CPU ≤ 0.2 % (2 ‰, ADR 0013) · startup ≤ 150 ms · Qt Core/Gui/Widgets only.
 
 ## Measure
 

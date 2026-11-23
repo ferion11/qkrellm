@@ -107,6 +107,45 @@ QStringView formatRpm(TextBuffer& buffer, std::optional<float> rpm)
     return view(buffer, n);
 }
 
+namespace {
+
+void appendDuration(TextBuffer& buffer, std::size_t& n, std::optional<double> seconds)
+{
+    if (!seconds || std::isnan(*seconds) || *seconds < 0.0) {
+        for (const char16_t c : {u'-', u'-', u':', u'-', u'-'}) {
+            buffer.at(n++) = c;
+        }
+        return;
+    }
+    constexpr long long kMaxMinutes = (99 * 60) + 59;
+    const long long minutes = std::min(std::llround(std::min(*seconds, 1e9) / 60.0), kMaxMinutes);
+    appendUnsigned(buffer, n, minutes / 60);
+    buffer.at(n++) = u':';
+    buffer.at(n++) = static_cast<char16_t>(u'0' + ((minutes % 60) / 10));
+    buffer.at(n++) = static_cast<char16_t>(u'0' + (minutes % 10));
+}
+
+} // namespace
+
+QStringView formatDuration(TextBuffer& buffer, std::optional<double> seconds)
+{
+    std::size_t n = 0;
+    appendDuration(buffer, n, seconds);
+    return view(buffer, n);
+}
+
+QStringView formatBattery(TextBuffer& buffer, std::optional<float> fraction,
+                          std::optional<double> secondsLeft)
+{
+    const QStringView percent = formatPercent(buffer, fraction);
+    auto n = static_cast<std::size_t>(percent.size());
+    if (secondsLeft && !std::isnan(*secondsLeft) && *secondsLeft >= 0.0) {
+        buffer.at(n++) = u' ';
+        appendDuration(buffer, n, secondsLeft);
+    }
+    return view(buffer, n);
+}
+
 QStringView formatBytes(TextBuffer& buffer, std::optional<double> bytes)
 {
     std::size_t n = 0;

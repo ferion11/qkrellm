@@ -7,7 +7,7 @@ qkrellm exists to be light. These numbers are requirements (ADR 0006), checked b
 | Metric | Limit | How measured |
 |---|---|---|
 | Private memory at idle | ≤ 16 MiB | `Private_Dirty` in `/proc/<pid>/smaps_rollup` after 2 s settle |
-| Idle CPU | ≤ 0.1 % of one core | utime+stime delta over the window (default 10 s) |
+| Idle CPU | ≤ 0.2 % (2 ‰) of one core, default monitors (ADR 0013) | `/proc/<pid>/schedstat` delta over the window (ns) |
 | Startup | ≤ 150 ms | process start (`/proc/self/stat` starttime) → first paint, best of 5 |
 | Linked Qt modules | Core, Gui, Widgets only | `readelf -d` (CTest `budget.qt_modules`) |
 | Sampling hot path | zero heap allocations | review (`perf-reviewer`), heaptrack spot checks |
@@ -58,6 +58,20 @@ History: `/tmp/qkrellm/bench/results.tsv` (date, commit, startup, private, pss, 
 | xcb, 70 px, + 2 network panels | 35 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 1 ‰ |
 | xcb, + Disk panel | 42 ms | 2.7 MiB | 12.7 MiB | 32 MiB | 1 ‰ |
 | xcb, + hwmon (Temp chart + 6 rows) | 47 ms | 2.7 MiB | 12.8 MiB | 32 MiB | 1 ‰ |
+
+The CPU column above came from clock ticks rounded down (a "1 ‰" there means 1.0–1.9 ‰).
+From here on CPU is measured exactly from `/proc/<pid>/schedstat` (ADR 0013):
+
+| Setup (release, 60 s window) | startup | private | CPU |
+|---|---|---|---|
+| main before battery (precise re-measure) | 45 ms | 2.7 MiB | 1.56 ‰ (xcb) |
+| + battery, /sys/block disks, hwmon tiers, header/chart repaint skipping, chart scrolling | 46 ms | 2.8 MiB | 1.0 ‰ (offscreen), 1.2–1.4 ‰ (xcb) |
+| GKrellM 2 on the same machine, same method (for reference) | — | 6.2 MiB | 6.1 ‰ |
+
+Cold per-read costs at 1 Hz (thread CPU time): /proc/stat 137 µs, /proc/diskstats 100 µs vs
+/sys/block/<disk>/stat 10–16 µs, /proc/net/dev 34 µs, /proc/meminfo 28 µs, coretemp 57 µs,
+battery uevent 357 µs (first read each second refreshes ACPI; any attribute costs that),
+AC adapter 93 µs. Hot-loop measurements are 3–5× lower and misleading for a 1 Hz app.
 
 hwmon read costs on the reference laptop (per read): coretemp ~5 µs CPU; acpitz ~55 µs;
 iwlwifi ~17 µs CPU / 150 µs wall; Asus WMI fans ~0.6 ms CPU; NVMe 3–15 ms wall

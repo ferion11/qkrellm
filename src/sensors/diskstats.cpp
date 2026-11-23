@@ -34,6 +34,32 @@ std::optional<std::uint32_t> parseU32(std::string_view token)
     return static_cast<std::uint32_t>(*value);
 }
 
+/// The statistics fields (after "major minor name" in /proc/diskstats).
+std::optional<BlockStat> parseFields(std::string_view fields)
+{
+    std::array<std::uint64_t, kStatFields> values{};
+    int count = 0;
+    for (std::string_view token = nextToken(fields); !token.empty(); token = nextToken(fields)) {
+        const auto value = parseUnsigned(token);
+        if (!value) {
+            return std::nullopt;
+        }
+        if (count < kStatFields) {
+            values.at(static_cast<std::size_t>(count)) = *value;
+        }
+        ++count;
+    }
+    if (count < kStatFields) {
+        return std::nullopt;
+    }
+    return BlockStat{
+        .readsCompleted = values[kReadsCompleted],
+        .sectorsRead = values[kSectorsRead],
+        .writesCompleted = values[kWritesCompleted],
+        .sectorsWritten = values[kSectorsWritten],
+    };
+}
+
 bool parseLine(std::string_view line, DiskStat& out)
 {
     const auto major = parseU32(nextToken(line));
@@ -42,29 +68,18 @@ bool parseLine(std::string_view line, DiskStat& out)
     if (!major || !minor || !validName(name)) {
         return false;
     }
-    std::array<std::uint64_t, kStatFields> fields{};
-    int count = 0;
-    for (std::string_view token = nextToken(line); !token.empty(); token = nextToken(line)) {
-        const auto value = parseUnsigned(token);
-        if (!value) {
-            return false;
-        }
-        if (count < kStatFields) {
-            fields.at(static_cast<std::size_t>(count)) = *value;
-        }
-        ++count;
-    }
-    if (count < kStatFields) {
+    const auto stat = parseFields(line);
+    if (!stat) {
         return false;
     }
     out = DiskStat{};
     std::ranges::copy(name, out.nameStorage.begin());
     out.major = *major;
     out.minor = *minor;
-    out.readsCompleted = fields[kReadsCompleted];
-    out.sectorsRead = fields[kSectorsRead];
-    out.writesCompleted = fields[kWritesCompleted];
-    out.sectorsWritten = fields[kSectorsWritten];
+    out.readsCompleted = stat->readsCompleted;
+    out.sectorsRead = stat->sectorsRead;
+    out.writesCompleted = stat->writesCompleted;
+    out.sectorsWritten = stat->sectorsWritten;
     return true;
 }
 
@@ -78,6 +93,11 @@ std::optional<std::size_t> DiskStats::find(std::string_view name) const
         }
     }
     return std::nullopt;
+}
+
+std::optional<BlockStat> parseBlockStat(std::string_view text)
+{
+    return parseFields(nextLine(text));
 }
 
 DiskStats parseDiskStats(std::string_view text)

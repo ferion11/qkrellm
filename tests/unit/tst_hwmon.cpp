@@ -19,7 +19,7 @@ using qk::sensors::parseSysfsInteger;
 
 namespace {
 
-const std::string kRoot = QK_FIXTURES_DIR "/sys/linux-6.18-x86_64-20cpu/class/hwmon";
+constexpr const char* kRoot = QK_FIXTURES_DIR "/sys/linux-6.18-x86_64-20cpu/class/hwmon";
 
 class TestHwmon final : public QObject
 {
@@ -36,9 +36,20 @@ private slots:
                  std::numeric_limits<std::int64_t>::max());
         QCOMPARE(parseSysfsInteger("-9223372036854775808").value_or(0),
                  std::numeric_limits<std::int64_t>::min());
-        for (const char* bad :
-             {"", "\n", "-", "--1", "+1", "1 2", "0x10", "abc", " 1", "9223372036854775808",
-              "-9223372036854775809", "99999999999999999999"}) {
+        for (const char* bad : {
+                 "",
+                 "\n",
+                 "-",
+                 "--1",
+                 "+1",
+                 "1 2",
+                 "0x10",
+                 "abc",
+                 " 1",
+                 "9223372036854775808",
+                 "-9223372036854775809",
+                 "99999999999999999999",
+             }) {
             QVERIFY2(!parseSysfsInteger(bad), bad);
         }
     }
@@ -69,7 +80,7 @@ private slots:
         QCOMPARE(package.hwmon, 10);
         QCOMPARE(package.channel, 1); // channels sorted numerically: 1, 2, 6, 10, ...
         QCOMPARE(package.label, std::string("Package id 0"));
-        QCOMPARE(package.inputPath, kRoot + "/hwmon10/temp1_input");
+        QCOMPARE(package.inputPath, std::string(kRoot) + "/hwmon10/temp1_input");
         QCOMPARE(sensors[8].channel, 2);
         QCOMPARE(sensors[9].channel, 6);
         QCOMPARE(sensors.back().label, std::string("Core 31"));

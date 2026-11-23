@@ -41,18 +41,19 @@ done
 "$binary" & pid=$!
 trap 'kill $pid 2>/dev/null || true' EXIT
 sleep 2  # settle
-ticks() { awk '{print $14 + $15}' "/proc/$pid/stat"; }
-t0=$(ticks)
+# CPU time in ns from the scheduler (exact), not /proc/<pid>/stat clock ticks (10 ms
+# granularity: over 30 s a whole 1 permille is only 3 ticks, so rounding hid overruns).
+cpu_ns() { awk '{print $1}' "/proc/$pid/schedstat"; }
+t0=$(cpu_ns)
 sleep "$seconds"
-t1=$(ticks)
+t1=$(cpu_ns)
 rss=$(awk '/^VmRSS:/ {print $2}' "/proc/$pid/status")
 private=$(awk '/^Private_Dirty:/ {print $2}' "/proc/$pid/smaps_rollup")
 pss=$(awk '/^Pss:/ {print $2}' "/proc/$pid/smaps_rollup")
 kill "$pid"; wait "$pid" 2>/dev/null || true
 trap - EXIT
 
-hz=$(getconf CLK_TCK)
-cpu_permille=$(( (t1 - t0) * 1000 / (hz * seconds) ))
+cpu_permille=$(awk -v a="$t0" -v b="$t1" -v s="$seconds" 'BEGIN { printf "%.2f", (b - a) / (s * 1e6) }')
 
 printf "startup_ms=%s private_kb=%s pss_kb=%s rss_kb=%s cpu_permille=%s platform=%s\n" \
     "$startup" "$private" "$pss" "$rss" "$cpu_permille" "$QT_QPA_PLATFORM"
@@ -66,7 +67,8 @@ status=0
 if (( check )); then
     (( startup <= QK_BUDGET_STARTUP_MS )) || { echo "OVER BUDGET: startup ${startup} ms > ${QK_BUDGET_STARTUP_MS}" >&2; status=1; }
     (( private <= QK_BUDGET_PRIVATE_KB )) || { echo "OVER BUDGET: private ${private} kB > ${QK_BUDGET_PRIVATE_KB}" >&2; status=1; }
-    (( cpu_permille <= QK_BUDGET_CPU_PERMILLE )) || { echo "OVER BUDGET: cpu ${cpu_permille}‰ > ${QK_BUDGET_CPU_PERMILLE}" >&2; status=1; }
+    awk -v c="$cpu_permille" -v b="$QK_BUDGET_CPU_PERMILLE" 'BEGIN { exit !(c <= b) }' ||
+        { echo "OVER BUDGET: cpu ${cpu_permille}‰ > ${QK_BUDGET_CPU_PERMILLE}" >&2; status=1; }
     (( status == 0 )) && echo "budget: OK"
 fi
 exit $status

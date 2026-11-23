@@ -8,10 +8,13 @@
 #include "ui/textformat.h"
 #include "ui/theme.h"
 
+#include <QCoreApplication>
+#include <QEvent>
 #include <QFont>
 #include <QFontMetrics>
 #include <QImage>
 #include <QObject>
+#include <QScreen>
 #include <QSignalSpy>
 #include <QTest>
 
@@ -21,9 +24,11 @@ using qk::ui::BitmapTextRenderer;
 using qk::ui::chartAutoScale;
 using qk::ui::ChartScale;
 using qk::ui::ChartWidget;
+using qk::ui::formatBattery;
 using qk::ui::formatBytes;
 using qk::ui::formatBytesOf;
 using qk::ui::formatCelsius;
+using qk::ui::formatDuration;
 using qk::ui::formatPercent;
 using qk::ui::formatRpm;
 using qk::ui::MainWindow;
@@ -119,6 +124,55 @@ private slots:
         QCOMPARE(text(formatRpm(b, 2400.4F)), QStringLiteral("2400rpm"));
         QCOMPARE(text(formatRpm(b, -1.0F)), QStringLiteral("0rpm"));
         QCOMPARE(text(formatRpm(b, std::nullopt)), QStringLiteral("--rpm"));
+    }
+
+    void formatsDurationAndBattery()
+    {
+        TextBuffer b{};
+        QCOMPARE(text(formatDuration(b, 0.0)), QStringLiteral("0:00"));
+        QCOMPARE(text(formatDuration(b, 3900.0)), QStringLiteral("1:05"));
+        QCOMPARE(text(formatDuration(b, 3929.0)), QStringLiteral("1:05")); // rounds to minute
+        QCOMPARE(text(formatDuration(b, 3931.0)), QStringLiteral("1:06"));
+        QCOMPARE(text(formatDuration(b, 45000.0)), QStringLiteral("12:30"));
+        QCOMPARE(text(formatDuration(b, 1e12)), QStringLiteral("99:59"));
+        QCOMPARE(text(formatDuration(b, -1.0)), QStringLiteral("--:--"));
+        QCOMPARE(text(formatDuration(b, std::nullopt)), QStringLiteral("--:--"));
+        QCOMPARE(text(formatBattery(b, 0.65F, std::nullopt)), QStringLiteral("65%"));
+        QCOMPARE(text(formatBattery(b, 0.65F, 4980.0)), QStringLiteral("65% 1:23"));
+        QCOMPARE(text(formatBattery(b, 0.65F, std::numeric_limits<double>::quiet_NaN())),
+                 QStringLiteral("65%"));
+        QCOMPARE(text(formatBattery(b, std::nullopt, std::nullopt)), QStringLiteral("--%"));
+    }
+
+    void dynamicLabelAndValue()
+    {
+        MetricRegistry registry(8);
+        const auto r = BitmapTextRenderer::load(QStringLiteral(":/qkrellm/fonts/default"), 1.0);
+        QVERIFY(r);
+        const Theme theme;
+        bool ac = false;
+        int labelCalls = 0;
+        qk::ui::Panel panel(
+            registry,
+            {
+                .labelText = [&](TextBuffer&) -> QStringView {
+                    ++labelCalls;
+                    return ac ? u"AC" : u"Bat";
+                },
+                .valueText =
+                    [](TextBuffer& buffer) { return formatBattery(buffer, 0.65F, 4980.0); },
+            },
+            *r, theme);
+        panel.resize(theme.panelWidth, panel.sizeHint().height());
+        const QImage bat = panel.grab().toImage();
+        ac = true;
+        const QImage onAc = panel.grab().toImage();
+        QCOMPARE(labelCalls, 2);
+        QVERIFY(bat != onAc); // the label changed
+        // The value "65% 1:23" is right-aligned and fits beside "Bat".
+        QVERIFY(r->horizontalAdvance(u"Bat") + r->horizontalAdvance(u"65% 1:23") +
+                    (3 * theme.panelPadding) <=
+                theme.panelWidth);
     }
 
     void fixedScaleChartUsesGivenMaximum()
@@ -302,6 +356,92 @@ private slots:
             for (int y = 0; y < image.height(); ++y) {
                 QCOMPARE(image.pixelColor(x, y), theme.windowBackground);
             }
+        }
+    }
+
+    void chartRefreshSkipsIdenticalFrames()
+    {
+        // Counts paint events reaching the chart.
+        struct PaintCounter final : QObject
+        {
+            int paints = 0;
+            bool eventFilter(QObject* /*watched*/, QEvent* event) override
+            {
+                paints += event->type() == QEvent::Paint ? 1 : 0;
+                return false;
+            }
+        };
+        Theme theme;
+        MetricRegistry registry(16);
+        const auto m = registry.add({.id = "m", .label = "M", .unit = MetricUnit::Fraction});
+        for (int i = 0; i < 4; ++i) {
+            registry.push(m, 0.5F);
+        }
+        ChartWidget chart(registry, {{.metric = m, .color = Qt::red}}, theme);
+        chart.resize(8, theme.chartHeight);
+        PaintCounter counter;
+        chart.installEventFilter(&counter);
+        chart.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&chart));
+        chart.refresh(); // first refresh: content key changes from "nothing"
+        QTRY_VERIFY(counter.paints > 0);
+        QCoreApplication::processEvents();
+        const int before = counter.paints;
+
+        registry.push(m, 0.5F); // a fifth column appears: different frame -> repaint
+        chart.refresh();
+        QCoreApplication::processEvents();
+        QVERIFY(counter.paints > before);
+        const int afterGrowth = counter.paints;
+
+        for (int i = 0; i < 4; ++i) { // fill the 8 visible columns with the same value
+            registry.push(m, 0.5F);
+            chart.refresh();
+        }
+        QCoreApplication::processEvents();
+        const int full = counter.paints;
+        registry.push(m, 0.5F); // all 8 visible columns already equal: identical frame
+        chart.refresh();
+        QCoreApplication::processEvents();
+        QCOMPARE(counter.paints, full);
+        registry.push(m, 0.25F); // a different newest value: repaint
+        chart.refresh();
+        QCoreApplication::processEvents();
+        QVERIFY(counter.paints > full);
+        QVERIFY(afterGrowth >= before);
+    }
+
+    void scrolledChartMatchesFullRepaint()
+    {
+        // The on-screen pixels after many scroll-based refreshes must equal a full render.
+        const auto r = BitmapTextRenderer::load(QStringLiteral(":/qkrellm/fonts/default"), 1.0);
+        QVERIFY(r);
+        Theme theme;
+        MetricRegistry registry(64);
+        const auto rx = registry.add({.id = "rx", .label = "rx", .unit = MetricUnit::Bytes});
+        const auto tx = registry.add({.id = "tx", .label = "tx", .unit = MetricUnit::Bytes});
+        ChartWidget chart(registry,
+                          {{.metric = rx, .color = Qt::red}, {.metric = tx, .color = Qt::green}},
+                          theme, ChartScale::Auto, 1.0, r.get());
+        chart.resize(24, theme.chartHeight);
+        chart.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&chart));
+        QScreen* screen = chart.screen();
+        QVERIFY(screen != nullptr);
+        for (int i = 0; i < 40; ++i) {
+            // Varying values, one scale change (peak at i = 20) and long flat stretches.
+            const float v = i == 20 ? 9000.0F : static_cast<float>((i % 7) * 100);
+            registry.push(rx, v);
+            registry.push(tx, i < 30 ? 50.0F : 0.0F);
+            chart.refresh();
+            QCoreApplication::processEvents();
+            const QImage shown =
+                screen->grabWindow(chart.winId()).toImage().convertToFormat(QImage::Format_RGB32);
+            const QImage full = chart.grab().toImage().convertToFormat(QImage::Format_RGB32);
+            if (shown.size() != full.size()) {
+                QSKIP("this platform cannot grab the window's backing store");
+            }
+            QVERIFY2(shown == full, qPrintable(QStringLiteral("frame %1 differs").arg(i)));
         }
     }
 

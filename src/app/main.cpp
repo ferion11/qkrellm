@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/startupprobe.h"
 #include "core/metricregistry.h"
+#include "core/monitors/batterymonitor.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/diskmonitor.h"
 #include "core/monitors/hwmonmonitor.h"
@@ -50,6 +51,32 @@ void addHwmonPanels(qk::ui::MainWindow& window, qk::core::HwmonMonitor& hwmon)
         window.addPanel(std::move(spec));
     }
 }
+std::optional<float> latestOf(const qk::core::MetricRegistry& registry, qk::core::MetricHandle h)
+{
+    const auto& history = registry.history(h);
+    return history.empty() ? std::nullopt : std::optional(history.latest());
+}
+
+/// "Bat 65% 1:23" while on battery; the label turns into "AC" when an adapter is online.
+void addBatteryPanel(qk::ui::MainWindow& window, const qk::core::MetricRegistry& registry,
+                     const qk::core::BatteryMonitor& battery)
+{
+    const qk::core::MetricRegistry* reg = &registry;
+    const auto ac = battery.ac();
+    const auto charge = battery.charge();
+    const auto seconds = battery.seconds();
+    window.addPanel({
+        .labelText = [reg, ac](qk::ui::TextBuffer&) -> QStringView {
+            return latestOf(*reg, ac).value_or(0.0F) > 0.5F ? u"AC" : u"Bat";
+        },
+        .valueText =
+            [reg, charge, seconds](qk::ui::TextBuffer& buffer) {
+                const auto s = latestOf(*reg, seconds);
+                return qk::ui::formatBattery(buffer, latestOf(*reg, charge),
+                                             s ? std::optional<double>(*s) : std::nullopt);
+            },
+    });
+}
 } // namespace
 
 int main(int argc, char* argv[])
@@ -76,10 +103,8 @@ int main(int argc, char* argv[])
         qWarning("qkrellm: cannot read /proc/stat; CPU monitor disabled");
     }
     auto disk = std::make_unique<qk::core::DiskMonitor>(registry);
-    if (!disk->isValid()) {
-        qWarning("qkrellm: cannot read /proc/diskstats; disk monitor disabled");
-    }
     auto hwmon = std::make_unique<qk::core::HwmonMonitor>(registry);
+    auto battery = std::make_unique<qk::core::BatteryMonitor>(registry);
     auto net = std::make_unique<qk::core::NetMonitor>(registry);
     if (!net->isValid()) {
         qWarning("qkrellm: cannot read /proc/net/dev; network monitor disabled");
@@ -147,11 +172,15 @@ int main(int argc, char* argv[])
         });
     }
     addHwmonPanels(window, *hwmon);
+    if (battery->hasBattery()) {
+        addBatteryPanel(window, registry, *battery);
+    }
     sampler.addMonitor(std::move(cpu));
     sampler.addMonitor(std::move(mem));
     sampler.addMonitor(std::move(disk));
     sampler.addMonitor(std::move(net));
     sampler.addMonitor(std::move(hwmon));
+    sampler.addMonitor(std::move(battery));
     QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, &qk::ui::MainWindow::refresh);
 
     if (parser.isSet(exitAfterFirstPaint)) {

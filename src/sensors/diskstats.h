@@ -46,6 +46,21 @@ struct DiskStats
     [[nodiscard]] std::optional<std::size_t> find(std::string_view name) const;
 };
 
+/// Counters of one block device from /sys/block/<name>/stat: the same statistics fields as a
+/// /proc/diskstats line, without "major minor name" (Documentation/block/stat.rst). Reading
+/// it is several times cheaper than /proc/diskstats, which lists every ram/loop/partition.
+struct BlockStat
+{
+    std::uint64_t readsCompleted = 0;
+    std::uint64_t sectorsRead = 0;
+    std::uint64_t writesCompleted = 0;
+    std::uint64_t sectorsWritten = 0;
+};
+
+/// Parses /sys/block/<name>/stat: at least 11 numeric fields (extra ones ignored);
+/// std::nullopt otherwise. Pure function: no I/O, no Qt, no allocation.
+[[nodiscard]] std::optional<BlockStat> parseBlockStat(std::string_view text);
+
 /// Parses the text of /proc/diskstats. A line with fewer than the 11 statistics fields,
 /// non-numeric values, or an invalid name (empty, longer than 31, containing '/' or
 /// control characters) is ignored; duplicates keep the first. Never fails: an empty or

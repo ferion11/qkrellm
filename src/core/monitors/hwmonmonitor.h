@@ -21,13 +21,16 @@ namespace qk::core {
 /// Some inputs are expensive to read (measured on one laptop: Asus WMI fans ~0.6 ms of CPU
 /// each, NVMe temperatures 3–15 ms of wall time as they query the drive). The first read of
 /// every enabled sensor is timed; one slower than `slowThreshold` is then read only every
-/// `kSlowPeriodTicks` ticks. Cheap ones (coretemp ~5 µs) are read every tick.
+/// `kSlowPeriodTicks` ticks, one slower than 5 × `slowThreshold` every `kVerySlowPeriodTicks`
+/// ticks. Cheap ones (coretemp ~5 µs) are read every tick.
 /// Metric ids: "hwmon.<chip>.<device or hwmonN>.<temp|fan><channel>", stable across boots
 /// unlike hwmonN numbering.
 class HwmonMonitor final : public Monitor
 {
 public:
     static constexpr int kSlowPeriodTicks = 10;
+    static constexpr int kVerySlowPeriodTicks = 30;
+    static constexpr int kVerySlowFactor = 5;
     static constexpr std::chrono::microseconds kDefaultSlowThreshold{100};
 
     explicit HwmonMonitor(MetricRegistry& registry, const std::string& root = "/sys/class/hwmon",

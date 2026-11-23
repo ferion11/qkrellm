@@ -1,11 +1,18 @@
 # src/sensors — kernel data parsers and readers
 
-Contents (ADR 0005): `textscan` (shared allocation-free tokenizing), `procstat` (parser of
-/proc/stat), `cpuusage` (deltas between samples), `meminfo` (parser of /proc/meminfo + usage
-derivation), `netdev` (parser of /proc/net/dev), `diskstats` (parser of
-/proc/diskstats), `rate` (`counterRate` for monotonically increasing counters), `sysfsvalue` (one-integer
-sysfs attributes), `hwmon` (startup discovery of /sys/class/hwmon inputs), `ProcFile` (the only I/O: open once,
-`pread`). Library `qkrellm_sensors` links **no Qt**. Rules:
+Contents (ADR 0005), one `.h/.cpp` pair each:
+- `textscan` — shared allocation-free tokenizing; `sysfsvalue` — one-integer sysfs files.
+- `procstat` + `cpuusage` — /proc/stat and CPU usage deltas.
+- `meminfo` — /proc/meminfo and memory usage derivation.
+- `netdev` — /proc/net/dev; `rate` — `counterRate` for monotonically increasing counters.
+- `diskstats` — /proc/diskstats and `parseBlockStat` for /sys/block/<disk>/stat (what the
+  disk monitor reads: much cheaper).
+- `hwmon` — startup discovery of /sys/class/hwmon inputs.
+- `powersupply` — power_supply uevents and the battery estimate.
+- `ProcFile` — the only per-tick I/O: open once, `pread`. (`hwmon` discovery and the
+  monitors' startup scans also touch the filesystem, once.)
+
+Library `qkrellm_sensors` links **no Qt**. Rules:
 
 ## Split parsing from I/O
 
@@ -28,7 +35,7 @@ sysfs attributes), `hwmon` (startup discovery of /sys/class/hwmon inputs), `Proc
 
 ## Tests are mandatory
 
-1. Capture: `tests/fixtures/capture.sh <tag>` (or `capture-hwmon.sh <tag>` for sysfs
+1. Capture: `tests/fixtures/capture.sh <tag>` (or `capture-sys.sh <tag>` for sysfs
    hwmon trees) → writes to `/tmp/qkrellm/scratch/<tag>/`.
 2. **Scrub** hostnames, MACs, serials, user paths; copy needed files to
    `tests/fixtures/proc/<tag>/…` (byte-exact; `.gitattributes` keeps them untouched).

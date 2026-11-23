@@ -60,6 +60,17 @@ std::optional<int> numberAfter(std::string_view text, std::string_view prefix,
     return static_cast<int>(*value);
 }
 
+std::string joinPath(std::string_view dir, std::string_view name, std::string_view suffix = {})
+{
+    std::string path;
+    path.reserve(dir.size() + 1 + name.size() + suffix.size());
+    path += dir;
+    path += '/';
+    path += name;
+    path += suffix;
+    return path;
+}
+
 std::vector<std::string> listDir(const std::string& path)
 {
     std::vector<std::string> names;
@@ -67,7 +78,8 @@ std::vector<std::string> listDir(const std::string& path)
     if (!dir) {
         return names;
     }
-    while (const dirent* entry = ::readdir(dir.get())) {
+    // Startup-only and single-threaded: readdir's static state is not shared.
+    while (const dirent* entry = ::readdir(dir.get())) { // NOLINT(concurrency-mt-unsafe)
         const std::string_view name(entry->d_name);
         if (name != "." && name != "..") {
             names.emplace_back(name);
@@ -79,7 +91,7 @@ std::vector<std::string> listDir(const std::string& path)
 std::string deviceName(const std::string& hwmonDir)
 {
     std::array<char, PATH_MAX> resolved{};
-    if (::realpath((hwmonDir + "/device").c_str(), resolved.data()) == nullptr) {
+    if (::realpath(joinPath(hwmonDir, "device").c_str(), resolved.data()) == nullptr) {
         return {};
     }
     const std::string_view path(resolved.data());
@@ -97,8 +109,8 @@ std::vector<HwmonSensor> discoverHwmon(const std::string& root)
         if (!hwmon) {
             continue;
         }
-        const std::string dir = root + "/" + entry;
-        const auto chip = readLine(dir + "/name");
+        const std::string dir = joinPath(root, entry);
+        const auto chip = readLine(joinPath(dir, "name"));
         if (!chip) {
             continue;
         }
@@ -118,8 +130,8 @@ std::vector<HwmonSensor> discoverHwmon(const std::string& root)
                     .channel = *channel,
                     .chip = *chip,
                     .device = device,
-                    .label = readLine(dir + "/" + base + "_label").value_or(base),
-                    .inputPath = dir + "/" + file,
+                    .label = readLine(joinPath(dir, base, "_label")).value_or(base),
+                    .inputPath = joinPath(dir, file),
                 });
             }
         }

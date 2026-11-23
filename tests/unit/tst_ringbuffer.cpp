@@ -37,6 +37,7 @@ private slots:
         QCOMPARE(rb[1], 6);
         QCOMPARE(rb[2], 7);
         QCOMPARE(rb.latest(), 7);
+        QCOMPARE(rb.pushes(), std::uint64_t{7}); // counts every push, not just the kept ones
     }
 
     void clearResets()

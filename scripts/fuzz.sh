@@ -15,7 +15,7 @@ bin="$out/build/fuzz/tests/fuzz"
 
 cd "$repo"
 cmake --preset fuzz >/dev/null
-cmake --build --preset fuzz --target fuzz_procstat fuzz_meminfo fuzz_netdev fuzz_diskstats fuzz_sysfsvalue fuzz_textatlas
+cmake --build --preset fuzz --target fuzz_procstat fuzz_meminfo fuzz_netdev fuzz_diskstats fuzz_sysfsvalue fuzz_powersupply fuzz_textatlas
 
 seed() { # <fuzzer> <files...>
     local corpus="$out/fuzz/corpus/$1"
@@ -28,10 +28,11 @@ seed fuzz_meminfo tests/fixtures/proc/*/proc/meminfo*
 seed fuzz_netdev tests/fixtures/proc/*/proc/net/dev*
 seed fuzz_diskstats tests/fixtures/proc/*/proc/diskstats*
 seed fuzz_sysfsvalue tests/fixtures/sys/*/class/hwmon/*/*_input
+seed fuzz_powersupply tests/fixtures/sys/*/class/power_supply/*/uevent
 seed fuzz_textatlas src/ui/fonts/*.qkatlas
 
 status=0
-for fuzzer in fuzz_procstat fuzz_meminfo fuzz_netdev fuzz_diskstats fuzz_sysfsvalue fuzz_textatlas; do
+for fuzzer in fuzz_procstat fuzz_meminfo fuzz_netdev fuzz_diskstats fuzz_sysfsvalue fuzz_powersupply fuzz_textatlas; do
     crashes="$out/fuzz/crashes/$fuzzer"
     rm -rf "$crashes" && mkdir -p "$crashes" # only report crashes from this run
     echo "== $fuzzer (${seconds}s)"

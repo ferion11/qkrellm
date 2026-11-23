@@ -7,6 +7,7 @@
 #include <QColor>
 #include <QWidget>
 
+#include <climits>
 #include <cstdint>
 #include <vector>
 
@@ -44,6 +45,12 @@ public:
 
     [[nodiscard]] QSize sizeHint() const override;
     [[nodiscard]] QSize minimumSizeHint() const override;
+    /// Schedules a repaint after new samples: nothing if the chart would look exactly the
+    /// same; when exactly one sample arrived and the scale is unchanged, scrolls the painted
+    /// pixels one column left (QWidget::scroll) so only the new column (and the scale label)
+    /// is painted; otherwise a full repaint. No allocation.
+    void refresh();
+
     /// Full-height value used by the last paint (the fixed maximum for ChartScale::Fixed).
     [[nodiscard]] double lastScale() const { return m_lastScale; }
 
@@ -52,6 +59,11 @@ protected:
 
 private:
     [[nodiscard]] float sampleAt(const ChartSeries& series, std::size_t age) const;
+    /// Calls bar(x, y, height, color) for every bar in columns [xMin, xMax]; returns the
+    /// scale used (computed over all visible columns).
+    template<typename Bar>
+    double layoutBars(const Bar& bar, int xMin = 0, int xMax = INT_MAX) const;
+    [[nodiscard]] QRect scaleLabelRect(double scale) const;
 
     const core::MetricRegistry* m_registry;
     std::vector<ChartSeries> m_series;
@@ -60,6 +72,11 @@ private:
     double m_fixedMaximum;
     const TextRenderer* m_text;
     double m_lastScale = 1.0;
+    std::uint64_t m_contentKey = 0; ///< what the last refresh() scheduled for painting
+    // State at the last refresh(), to decide between scrolling and a full repaint.
+    std::uint64_t m_refreshedPushes = 0;
+    double m_refreshedScale = 0.0;
+    QSize m_refreshedSize;
 };
 
 } // namespace qk::ui

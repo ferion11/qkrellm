@@ -12,6 +12,8 @@ add_library(qkrellm_sensors STATIC
     meminfo.h
     netdev.cpp
     netdev.h
+    powersupply.cpp
+    powersupply.h
     procfile.cpp
     procfile.h
     procstat.cpp
