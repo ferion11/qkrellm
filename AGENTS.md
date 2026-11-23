@@ -25,6 +25,7 @@ benchmarks/measure.sh --check          # resource budget (needs release build)
 scripts/coverage.sh                    # -> /tmp/qkrellm/coverage/index.html
 scripts/fuzz.sh [seconds]              # every parser fuzzer (default 60 s each)
 scripts/check-qt-min.sh                # build + test against Qt 6.5 (minimum; installs it once)
+scripts/make-appimage.sh              # x86_64 AppImage -> /tmp/qkrellm/appimage/out (CI: appimage.yml)
 ctest --preset dev -R abi              # run a subset
 ```
 

@@ -22,6 +22,9 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- Continuous AppImage (x86_64): `scripts/make-appimage.sh` (pinned linuxdeploy + Qt
+  plugin) and `.github/workflows/appimage.yml`, which publishes every push to `main` as the
+  `continuous-master` pre-release (with zsync update information). Application icon.
 - Core sampling: `RingBuffer`, `MetricRegistry`, `Monitor`, single-timer `Sampler`,
   `CpuMonitor` (aggregate and per-CPU usage). The app samples once per second and shows
   current CPU usage; a test proves steady-state sampling performs no heap allocation.

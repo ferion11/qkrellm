@@ -9,4 +9,5 @@ set_target_properties(qkrellm_example_hello PROPERTIES
 qk_set_warnings(qkrellm_example_hello)
 
 install(TARGETS qkrellm_example_hello
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/qkrellm/plugins)
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/qkrellm/plugins
+    COMPONENT examples) # not shipped in the AppImage (no plugin loader before M4)

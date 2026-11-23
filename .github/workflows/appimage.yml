@@ -1,0 +1,101 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Continuous AppImage (x86_64): every push to main is built, tested, packaged and published
+# as the "continuous-master" pre-release, replacing the previous one. Pull requests only
+# build the AppImage (downloadable as a workflow artifact) to keep packaging from rotting.
+name: AppImage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: appimage-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RELEASE_TAG: continuous-master
+
+jobs:
+  appimage:
+    name: build AppImage (x86_64)
+    # Oldest supported runner: the AppImage runs on distributions with this glibc or newer.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain and Qt runtime dependencies
+        # CMake >= 3.25 is preinstalled on the runner image; g++-12 for C++20.
+        # The libxcb*/xkbcommon packages are what the bundled xcb platform plugin links to.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build g++-12 libgl-dev libegl1 libxkbcommon-dev libfontconfig1 \
+            libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
+            libdbus-1-3 xvfb xauth
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3' # LTS bundled into the AppImage (min supported Qt is tested in CI)
+          cache: true
+      - name: Build, test and package
+        env:
+          CC: gcc-12
+          CXX: g++-12
+          QK_UPDATE_INFORMATION: gh-releases-zsync|${{ github.repository_owner }}|${{ github.event.repository.name }}|${{ env.RELEASE_TAG }}|qkrellm-*-x86_64.AppImage.zsync
+        run: QMAKE="$QT_ROOT_DIR/bin/qmake" scripts/make-appimage.sh
+      - name: Smoke-test the AppImage (bundled xcb plugin, under Xvfb)
+        run: |
+          app=$(ls /tmp/qkrellm/appimage/out/qkrellm-*-x86_64.AppImage)
+          APPIMAGE_EXTRACT_AND_RUN=1 timeout 60 xvfb-run -a "$app" --exit-after-first-paint \
+            | tee /dev/stderr | grep -q '^first-paint-ms='
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qkrellm-appimage
+          path: /tmp/qkrellm/appimage/out/
+          if-no-files-found: error
+
+  publish:
+    name: publish continuous pre-release
+    needs: appimage
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'ferion11/qkrellm'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Never interrupt a publish half-way (release deleted, new one not yet created).
+    concurrency:
+      group: publish-continuous
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: qkrellm-appimage
+          path: dist
+      - name: Replace the continuous pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          short=${GITHUB_SHA::7}
+          {
+            echo "Automated development build of \`main\` at ${GITHUB_SHA} — **not a stable release**."
+            echo
+            echo "Commit: ${{ github.server_url }}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+            echo "Built: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo
+            echo '```'
+            printf '%s\n' "${COMMIT_MSG:-$short}" | head -n 1
+            echo '```'
+            echo
+            echo 'Run: `chmod +x qkrellm-*-x86_64.AppImage && ./qkrellm-*-x86_64.AppImage`'
+            echo '(x86_64, glibc 2.35+; uses X11/XWayland).'
+          } > notes.md
+          gh release delete "$RELEASE_TAG" --cleanup-tag --yes || true
+          gh release create "$RELEASE_TAG" dist/* \
+            --prerelease --latest=false \
+            --target "$GITHUB_SHA" \
+            --title "Continuous build (main, $short)" \
+            --notes-file notes.md

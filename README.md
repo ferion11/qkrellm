@@ -8,6 +8,17 @@ and sensors, extensible through a **stable C plugin API**. Linux only.
 > startup, ≈ 2.7 MiB private memory). More monitors arrive in M2.
 > See [docs/roadmap.md](docs/roadmap.md).
 
+## Try it
+
+A development AppImage (x86_64) is rebuilt on every push to `main` and published as the
+[`continuous-master` pre-release](https://github.com/ferion11/qkrellm/releases/tag/continuous-master):
+
+```sh
+chmod +x qkrellm-*-x86_64.AppImage && ./qkrellm-*-x86_64.AppImage
+```
+
+It is a snapshot of the current state, not a stable release.
+
 ## Goals
 
 - **Frugal:** ≤ 16 MiB private memory, ≈ 0 % idle CPU, fast startup
