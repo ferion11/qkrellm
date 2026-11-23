@@ -210,6 +210,7 @@ private slots:
             QVERIFY(fits(u"Swap", u"999M"));
             QVERIFY(fits(u"Mem", u"7.1G/62G"));
             QVERIFY(fits(u"Temp", u"100\u00B0C"));
+            QVERIFY(fits(u"/home", u"100%"));
             QVERIFY(fits(u"iwlwifi_1", u"45\u00B0C"));
         }
     }

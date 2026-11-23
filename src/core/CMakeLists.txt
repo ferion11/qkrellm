@@ -12,6 +12,8 @@ add_library(qkrellm_core STATIC
     monitors/cpumonitor.h
     monitors/diskmonitor.cpp
     monitors/diskmonitor.h
+    monitors/filesystemmonitor.cpp
+    monitors/filesystemmonitor.h
     monitors/hwmonmonitor.cpp
     monitors/hwmonmonitor.h
     monitors/memorymonitor.cpp

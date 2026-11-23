@@ -9,6 +9,7 @@ Contents (ADR 0005), one `.h/.cpp` pair each:
   disk monitor reads: much cheaper).
 - `hwmon` — startup discovery of /sys/class/hwmon inputs.
 - `powersupply` — power_supply uevents and the battery estimate.
+- `mounts` — /proc/self/mounts, disk-mount selection and statvfs usage math.
 - `ProcFile` — the only per-tick I/O: open once, `pread`. (`hwmon` discovery and the
   monitors' startup scans also touch the filesystem, once.)
 

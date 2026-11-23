@@ -32,6 +32,9 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- Filesystem monitor (M2): `/proc/self/mounts` parser (+ fuzzer), local disk mount
+  selection (one mount per device, no squashfs), df-like usage from statvfs,
+  `FilesystemMonitor` (every 10 s); one "/home 25%" row per filesystem.
 - Battery monitor (M2): power_supply uevent parser and `estimateBattery` (+ fuzzer),
   `BatteryMonitor`, "Bat 65% 1:23" row (label "AC" on mains); dynamic panel texts
   (`PanelSpec::labelText` / `valueText`); `tests/fixtures/capture-sys.sh` (was

@@ -73,7 +73,9 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       /sys/block, hwmon very-slow tier (30 s), header repaint only on text change, charts
       skip identical frames and scroll by one column; `scripts/lint.sh` now lints new
       (untracked) files too
-- [ ] Filesystems (`statvfs` on `/proc/mounts` entries)
+- [x] Filesystems (`statvfs` on `/proc/self/mounts` entries): `sensors/mounts` (parser with
+      octal unescaping, disk-mount selection, df-like usage; + fuzzer), `FilesystemMonitor`
+      (every 10 s, injectable statvfs), one "/home 25%" row per local disk filesystem
 - [ ] Clock / uptime / load
 
 ## M3 — Configuration and themes
@@ -103,9 +105,9 @@ M2 in progress, one monitor per branch with the `new-monitor` skill (fixtures fr
 machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel,
 `benchmarks/measure.sh` within ADR 0013's 2 ‰):
 
-1. Filesystems (`statvfs` on `/proc/mounts` entries): used/total per mount, slow period.
-2. Clock / uptime / load (`/proc/uptime`, `/proc/loadavg`): uses `PanelSpec::valueText`.
-3. Pending fixtures: a second machine's sysfs tree (`tests/fixtures/capture-sys.sh
+1. Clock / uptime / load (`/proc/uptime`, `/proc/loadavg`): uses `PanelSpec::valueText`;
+   last M2 item, then close M2 (README status, budget table) and plan M3.
+2. Pending fixtures: a second machine's sysfs tree (`tests/fixtures/capture-sys.sh
    linux-6.18.18-manjaro-28cpu` on the maintainer's Manjaro box → tarball): hwmon +
    power_supply.
 Open questions: devices/sensors that appear after startup are not shown — revisit with M3

@@ -3,6 +3,7 @@
 #include "core/monitors/batterymonitor.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/diskmonitor.h"
+#include "core/monitors/filesystemmonitor.h"
 #include "core/monitors/hwmonmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
@@ -85,6 +86,7 @@ namespace {
 using qk::core::BatteryMonitor;
 using qk::core::CpuMonitor;
 using qk::core::DiskMonitor;
+using qk::core::FilesystemMonitor;
 using qk::core::HwmonMonitor;
 using qk::core::MemoryMonitor;
 using qk::core::MetricRegistry;
@@ -386,6 +388,39 @@ private slots:
         QVERIFY(other.history(missing.total()).empty());
     }
 
+    void filesystemMonitorFromFixture()
+    {
+        MetricRegistry registry(8);
+        std::vector<std::string> asked;
+        FilesystemMonitor fs(
+            registry, QK_FIXTURES_DIR "/proc/linux-6.18-x86_64-20cpu/proc/mounts",
+            [&asked](const std::string& path) -> std::optional<qk::sensors::FsUsage> {
+                asked.push_back(path);
+                if (path == "/efi") {
+                    return std::nullopt; // e.g. unmounted meanwhile
+                }
+                return qk::sensors::fsUsage(1000, 750, 700, 4096);
+            });
+        QCOMPARE(fs.periodTicks(), FilesystemMonitor::kPeriodTicks);
+        QCOMPARE(fs.mounts().size(), std::size_t{3});
+        QCOMPARE(fs.mounts()[2].mountPoint, std::string("/home"));
+        QCOMPARE(registry.info(fs.mounts()[0].used).id, std::string("fs:/.used"));
+        // Sampled once at construction: 250 used of 250 + 700 available.
+        QCOMPARE(registry.history(fs.mounts()[0].used).latest(), static_cast<float>(250.0 / 950.0));
+        QCOMPARE(registry.history(fs.mounts()[2].totalBytes).latest(), 1000.0F * 4096);
+        QVERIFY(registry.history(fs.mounts()[1].used).empty()); // statvfs failed
+        fs.sample();
+        QCOMPARE(registry.history(fs.mounts()[0].used).size(), std::size_t{2});
+        QCOMPARE(asked.size(), std::size_t{6});
+
+        MetricRegistry other(8);
+        FilesystemMonitor none(other, "/nonexistent/qkrellm/mounts");
+        QVERIFY(none.mounts().empty());
+        none.sample();
+        QVERIFY(FilesystemMonitor::statvfs("/").has_value()); // the real one works
+        QVERIFY(!FilesystemMonitor::statvfs("/nonexistent/qkrellm").has_value());
+    }
+
     void hwmonMonitorFromFixtureTree()
     {
         MetricRegistry registry(8);
@@ -547,7 +582,8 @@ private slots:
             QVERIFY(hwmon->enable(i));
         }
         sampler.addMonitor(std::move(hwmon));
-        sampler.addMonitor(std::make_unique<BatteryMonitor>(registry)); // real power_supply
+        sampler.addMonitor(std::make_unique<BatteryMonitor>(registry));    // real power_supply
+        sampler.addMonitor(std::make_unique<FilesystemMonitor>(registry)); // real mounts
         auto net = std::make_unique<NetMonitor>(registry); // real /proc/net/dev + sysfs
         QVERIFY(net->isValid());
         sampler.addMonitor(std::move(net));

@@ -43,6 +43,10 @@ qk_add_unit_test(tst_meminfo
     SOURCES tst_meminfo.cpp
     LIBS qkrellm_sensors Qt6::Core)
 
+qk_add_unit_test(tst_mounts
+    SOURCES tst_mounts.cpp
+    LIBS qkrellm_sensors Qt6::Core)
+
 qk_add_unit_test(tst_netdev
     SOURCES tst_netdev.cpp
     LIBS qkrellm_sensors Qt6::Core)

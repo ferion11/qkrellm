@@ -10,6 +10,8 @@ add_library(qkrellm_sensors STATIC
     hwmon.h
     meminfo.cpp
     meminfo.h
+    mounts.cpp
+    mounts.h
     netdev.cpp
     netdev.h
     powersupply.cpp

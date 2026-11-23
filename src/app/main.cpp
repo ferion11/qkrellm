@@ -4,6 +4,7 @@
 #include "core/monitors/batterymonitor.h"
 #include "core/monitors/cpumonitor.h"
 #include "core/monitors/diskmonitor.h"
+#include "core/monitors/filesystemmonitor.h"
 #include "core/monitors/hwmonmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
@@ -103,6 +104,7 @@ int main(int argc, char* argv[])
         qWarning("qkrellm: cannot read /proc/stat; CPU monitor disabled");
     }
     auto disk = std::make_unique<qk::core::DiskMonitor>(registry);
+    auto filesystems = std::make_unique<qk::core::FilesystemMonitor>(registry);
     auto hwmon = std::make_unique<qk::core::HwmonMonitor>(registry);
     auto battery = std::make_unique<qk::core::BatteryMonitor>(registry);
     auto net = std::make_unique<qk::core::NetMonitor>(registry);
@@ -158,6 +160,12 @@ int main(int argc, char* argv[])
             .chartScale = qk::ui::ChartScale::Auto,
         });
     }
+    for (const auto& fs : filesystems->mounts()) { // "/home 25%"
+        window.addPanel({
+            .label = QString::fromStdString(fs.mountPoint),
+            .valueMetric = fs.used,
+        });
+    }
     for (const auto& itf : net->interfaces()) {
         window.addPanel({
             .label = QString::fromStdString(itf.name),
@@ -178,6 +186,7 @@ int main(int argc, char* argv[])
     sampler.addMonitor(std::move(cpu));
     sampler.addMonitor(std::move(mem));
     sampler.addMonitor(std::move(disk));
+    sampler.addMonitor(std::move(filesystems));
     sampler.addMonitor(std::move(net));
     sampler.addMonitor(std::move(hwmon));
     sampler.addMonitor(std::move(battery));
