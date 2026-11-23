@@ -19,8 +19,11 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## M1 — Vertical slice: CPU
 
-- [ ] **Investigate first-text-draw cost (~120 ms)** and private heap (~9.8 MiB) with
-      heaptrack; decide text strategy (ADR)
+- [x] Investigate first-text-draw cost (~120 ms) and private heap (~9.8 MiB): both are
+      Qt's font database populated from fontconfig (∝ installed fonts) → ADR 0011
+- [ ] `tools/glyphgen` + committed atlases (DejaVu, ASCII + Latin-1, 1×/2×); `ui`:
+      `TextRenderer`, `BitmapTextRenderer`; MainWindow uses it; test that the font
+      database stays unpopulated; startup budget met on xcb
 - [ ] `src/sensors/`: `qkrellm_sensors` target; `/proc/stat` parser + fixtures (≥ 2 kernels) + fuzzer
 - [ ] `core`: `RingBuffer`, `Sampler` (single coarse timer), `MetricRegistry`
 - [ ] `ui`: `ChartWidget`, `Panel`; CPU panel visible in MainWindow
@@ -39,6 +42,7 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 ## M3 — Configuration and themes
 
 - [ ] Config schema + migrations (QSettings INI), preferences dialog
+- [ ] Opt-in `SystemFontTextRenderer` (ADR 0011)
 - [ ] Theme format (`theme.ini` + images), loader, 1–2 built-in themes
 - [ ] Decide SVG handling without QtSvg
 
@@ -58,6 +62,8 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## Next steps
 
-1. Maintainer: `gh auth login`, review branch `chore/m0-foundation`, push and check CI.
-2. Start M1 with the text-cost investigation (it shapes UI code), then the `/proc/stat`
-   vertical slice using the `new-monitor` skill.
+1. Implement the bitmap text path (first open M1 item): atlas format (PNG + metrics in a
+   Qt resource), `tools/glyphgen` (offline, DejaVu, Latin-1, 1×/2×), `TextRenderer` +
+   `BitmapTextRenderer`, switch `MainWindow` to it, add the "font database untouched" test,
+   and confirm with `QT_QPA_PLATFORM=xcb benchmarks/measure.sh --check`.
+2. Then the `/proc/stat` vertical slice with the `new-monitor` skill.

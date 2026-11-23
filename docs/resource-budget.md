@@ -37,8 +37,27 @@ History: `/tmp/qkrellm/bench/results.tsv` (date, commit, startup, private, pss, 
 Findings:
 - ~41 MiB of RSS is file-backed and shared: libQt6Gui/Widgets/Core (~17 MiB),
   two fontconfig caches (~8 MiB), locale archive (~2 MiB), libstdc++.
-- ~9.8 MiB of private memory is heap for an empty window — worth a heaptrack pass in M1.
-- **The first `QPainter::drawText` costs ~120 ms** (fontconfig + glyph rasterisation): an
-  experiment with the same window painted without text reached first paint in ~20 ms.
-  → M1/M3 must decide the text strategy (e.g. theme-provided bitmap font strips, as
-  GKrellM themes did, or deferring text until after first paint).
+
+## Text rendering investigation (M1, 2026-11-23)
+
+Machine: 6 240 installed fonts. Details and decision: ADR 0011.
+
+| Scenario (one 11 px string) | first text ready | private memory |
+|---|---|---|
+| no text | — (first paint ≈ 20 ms) | 1.7 MiB |
+| Qt + system fonts | 117 ms offscreen / 130 ms xcb | 11.5 MiB |
+| Qt + minimal fontconfig (DejaVu only) | 17 ms | 2.6 MiB |
+| bitmap glyph strip (`drawPixmap`) | 3 ms | 1.95 MiB |
+
+- The M0 "~9.8 MiB heap" and "~120 ms first drawText" are the same cause: Qt populating its
+  font database from fontconfig (≈ 87 ms) + font matching (≈ 28 ms). heaptrack: 5.6 of
+  7.06 MiB peak heap allocated inside libfontconfig, one allocation per installed font.
+- Rasterising text is ≈ 0.3 ms; syscalls ≈ 14 ms in total — the cost is CPU.
+- Cost scales with the user's installed fonts, so it cannot be budgeted unless panels avoid
+  system fonts → bitmap atlases by default (ADR 0011).
+- Until `BitmapTextRenderer` lands, the hello window still uses `drawText` and keeps the
+  M0 numbers above.
+
+Reproduce with the standalone experiment in `benchmarks/text-cost/` (usage in its
+`main.cpp`; modes `notext`, `system`, `appfont`, `gen`, `bitmap`), and profile the app with
+`heaptrack -o /tmp/qkrellm/bench/heap <binary> --exit-after-first-paint`.

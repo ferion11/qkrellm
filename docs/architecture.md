@@ -9,7 +9,8 @@ Dependencies point **down only**. A layer never includes headers from a layer ab
 ```
  src/app/         main(), CLI, window-manager hints, single instance        (Qt Widgets)
     │
- src/ui/          MainWindow, Panel, ChartWidget, Krell, Decal, Theme        (Qt Gui/Widgets)
+ src/ui/          MainWindow, Panel, ChartWidget, Krell, Decal, Theme,       (Qt Gui/Widgets)
+                  TextRenderer (bitmap atlases by default, ADR 0011)
     │
  src/pluginhost/  dlopen loader, C ABI <-> core adapter, fault isolation     (QtCore)   [M4]
     │
@@ -43,6 +44,8 @@ Rules that keep this cheap:
 - **Files stay open.** `/proc/stat` etc. are opened once; `pread(fd, buf, n, 0)` re-reads.
 - **One timer.** Monitors declare a period that is a multiple of the base tick.
 - **Repaint only what changed**; static theme parts are cached `QPixmap`s.
+- **No system fonts in panels by default.** Text goes through `TextRenderer`; the default
+  bitmap implementation never touches `QFont`/`QFontDatabase` (ADR 0011).
 
 ## Plugins (M4)
 
