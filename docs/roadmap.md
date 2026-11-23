@@ -17,7 +17,7 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 - [x] Gentoo live ebuild draft in `packaging/gentoo/`
 - [ ] First push + green CI (needs `gh auth login` and maintainer approval)
 
-## M1 — Vertical slice: CPU
+## M1 — Vertical slice: CPU ✅
 
 - [x] Investigate first-text-draw cost (~120 ms) and private heap (~9.8 MiB): both are
       Qt's font database populated from fontconfig (∝ installed fonts) → ADR 0011
@@ -35,8 +35,12 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       `Sampler` (one coarse QTimer, per-monitor periods), `CpuMonitor` (aggregate busy/user/
       system + per-CPU busy); app samples at 1 Hz and shows "CPU nn%";
       `tst_sampling` proves steady-state ticks allocate nothing (operator-new probe)
-- [ ] `ui`: `ChartWidget`, `Panel`; CPU panel visible in MainWindow
-- [ ] Budget still met (`measure.sh --check`)
+- [x] `ui`: `Theme` (built-in dark defaults until M3), `ChartWidget` (stacked series, one
+      column per sample, fillRect only), `Panel` (label + value header via `TextRenderer`);
+      MainWindow is a framed panel stack; CPU panel shows system + user stacked;
+      `tst_panels` checks bar heights pixel-exactly and that the whole window renders without
+      populating the font database
+- [x] Budget met with the real CPU panel (xcb: 39 ms, 2.7 MiB private, CPU 0 ‰ over 30 s)
 
 ## M2 — Built-in monitors
 
@@ -71,8 +75,13 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## Next steps
 
-1. `ui`: `ChartWidget` (draws a `RingBuffer<float>` history, one column per sample, dirty-rect
-   repaints, cached background) and `Panel` (label/value text via `TextRenderer`, chart).
-   Replace the "CPU nn%" placeholder in `MainWindow` with a CPU panel (aggregate chart; per-CPU
-   charts optional/config later). Keep `measure.sh --check` green and paint allocation-free.
-2. Then close M1: budget check on xcb with the real panel, update the baseline table.
+M1 is complete. Start M2 (built-in monitors), one monitor per branch, each with the
+`new-monitor` skill (fixtures from ≥ 2 machines, pure parser, fuzzer, allocation-free
+sampling covered by a `tst_sampling`-style probe, a panel):
+
+1. Memory/swap (`/proc/meminfo`) — simplest next parser; panel with a used/total chart and
+   value text. Needs a non-percent value formatter (bytes → "3.2G") in `ui/textformat`.
+2. Then network (`/proc/net/dev`, rates need a bytes/s chart scale — first non-Fraction
+   metric: decide chart autoscaling).
+Open questions to settle early in M2: chart scaling for non-Fraction metrics; per-CPU charts
+(currently aggregate only) as a config option in M3.

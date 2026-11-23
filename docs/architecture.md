@@ -9,7 +9,7 @@ Dependencies point **down only**. A layer never includes headers from a layer ab
 ```
  src/app/         main(), CLI, window-manager hints, single instance        (Qt Widgets)
     │
- src/ui/          MainWindow, Panel, ChartWidget, Krell, Decal, Theme,       (Qt Gui/Widgets)
+ src/ui/          MainWindow (panel stack), Panel, ChartWidget, Theme,       (Qt Gui/Widgets)
                   TextRenderer (bitmap atlases by default, ADR 0011)
     │
  src/pluginhost/  dlopen loader, C ABI <-> core adapter, fault isolation     (QtCore)   [M4]

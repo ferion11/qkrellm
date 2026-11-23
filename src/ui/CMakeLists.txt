@@ -3,13 +3,20 @@
 add_library(qkrellm_ui STATIC
     bitmaptextrenderer.cpp
     bitmaptextrenderer.h
+    chartwidget.cpp
+    chartwidget.h
     mainwindow.cpp
     mainwindow.h
+    panel.cpp
+    panel.h
     systemfonttextrenderer.cpp
     systemfonttextrenderer.h
     textatlas.cpp
     textatlas.h
-    textrenderer.h)
+    textformat.cpp
+    textformat.h
+    textrenderer.h
+    theme.h)
 target_link_libraries(qkrellm_ui
     PUBLIC
         qkrellm_core

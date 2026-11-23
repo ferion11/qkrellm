@@ -4,8 +4,9 @@ A lightweight system monitor in the spirit of [GKrellM](http://gkrellm.srcbox.ne
 written in **Qt 6**: a compact stack of charts and meters for CPU, memory, network, disks
 and sensors, extensible through a **stable C plugin API**. Linux only.
 
-> **Status:** early development — the engineering foundation (M0) is in place; monitors
-> start in M1. See [docs/roadmap.md](docs/roadmap.md).
+> **Status:** early development — M1 done: a CPU panel sampled once per second (≈ 40 ms
+> startup, ≈ 2.7 MiB private memory). More monitors arrive in M2.
+> See [docs/roadmap.md](docs/roadmap.md).
 
 ## Goals
 

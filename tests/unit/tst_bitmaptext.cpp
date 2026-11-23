@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Verifies ADR 0011: panel text renders without populating Qt's font database.
+#include "fontconfigprobe.h"
 #include "ui/bitmaptextrenderer.h"
 #include "ui/systemfonttextrenderer.h"
 
@@ -7,29 +8,6 @@
 #include <QObject>
 #include <QPainter>
 #include <QTest>
-
-#include <atomic>
-
-#include <dlfcn.h>
-
-// --- fontconfig probe --------------------------------------------------------------------
-// Qt populates its font database with FcFontList(). This executable is linked with
-// ENABLE_EXPORTS, so this definition interposes the one in libfontconfig and counts calls.
-// Opaque pointer types stand in for FcFontSet/FcConfig/FcPattern/FcObjectSet.
-namespace {
-std::atomic<int> g_fcFontListCalls{0}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-using FcFontListFn = void* (*)(void*, void*, void*);
-} // namespace
-
-extern "C" __attribute__((visibility("default"))) void* FcFontList(void* config, void* pattern,
-                                                                   void* objectSet)
-{
-    g_fcFontListCalls.fetch_add(1);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): dlsym returns void*
-    static const auto real = reinterpret_cast<FcFontListFn>(dlsym(RTLD_NEXT, "FcFontList"));
-    return real != nullptr ? real(config, pattern, objectSet) : nullptr;
-}
-// ------------------------------------------------------------------------------------------
 
 namespace {
 
@@ -114,7 +92,7 @@ private slots:
     void bitmapPathNeverPopulatesFontDatabase()
     {
         // Everything above ran through the bitmap path only.
-        QCOMPARE(g_fcFontListCalls.load(), 0);
+        QCOMPARE(qk::test::fcFontListCalls.load(), 0);
     }
 
     // Must stay last: it populates the font database for the rest of the process.
@@ -122,10 +100,10 @@ private slots:
     {
         const SystemFontTextRenderer system{QFont()};
         QVERIFY(inkPixels(render(system, u"CPU 100%")) > 0);
-        if (g_fcFontListCalls.load() == 0) {
+        if (qk::test::fcFontListCalls.load() == 0) {
             QSKIP("Qt does not use fontconfig here; the font-database probe cannot observe it");
         }
-        QVERIFY(g_fcFontListCalls.load() > 0);
+        QVERIFY(qk::test::fcFontListCalls.load() > 0);
     }
 };
 

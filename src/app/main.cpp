@@ -40,21 +40,34 @@ int main(int argc, char* argv[])
     qk::core::MetricRegistry registry(kHistoryLength);
     qk::core::Sampler sampler(kSampleInterval);
     auto cpu = std::make_unique<qk::core::CpuMonitor>(registry);
-    const qk::core::MetricHandle cpuBusy = cpu->busy();
     if (!cpu->isValid()) {
         qWarning("qkrellm: cannot read /proc/stat; CPU monitor disabled");
     }
-    sampler.addMonitor(std::move(cpu));
 
-    qk::ui::MainWindow window(registry, cpuBusy);
-    QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, qOverload<>(&QWidget::update));
+    qk::ui::MainWindow window(registry);
+    const qk::ui::Theme& theme = window.theme();
+    window.addPanel({
+        .label = QStringLiteral("CPU"),
+        .valueMetric = cpu->busy(),
+        .series =
+            {
+                {.metric = cpu->system(), .color = theme.seriesSecondary},
+                {.metric = cpu->user(), .color = theme.seriesPrimary},
+            },
+    });
+    sampler.addMonitor(std::move(cpu));
+    QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, &qk::ui::MainWindow::refresh);
 
     if (parser.isSet(exitAfterFirstPaint)) {
         QObject::connect(&window, &qk::ui::MainWindow::firstPaintDone, &app, [] {
-            const auto ms = qk::app::msSinceProcessStart();
-            std::printf("first-paint-ms=%lld\n", ms.value_or(-1));
-            std::fflush(stdout);
-            QTimer::singleShot(0, qApp, &QCoreApplication::quit);
+            // Read the clock from a queued call: by then the whole frame (children included)
+            // has been painted and flushed.
+            QTimer::singleShot(0, qApp, [] {
+                const auto ms = qk::app::msSinceProcessStart();
+                std::printf("first-paint-ms=%lld\n", ms.value_or(-1));
+                std::fflush(stdout);
+                QCoreApplication::quit();
+            });
         });
     }
 

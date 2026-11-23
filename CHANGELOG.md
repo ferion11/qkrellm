@@ -25,6 +25,9 @@ All notable changes to this project are documented here. Format:
 - Core sampling: `RingBuffer`, `MetricRegistry`, `Monitor`, single-timer `Sampler`,
   `CpuMonitor` (aggregate and per-CPU usage). The app samples once per second and shows
   current CPU usage; a test proves steady-state sampling performs no heap allocation.
+- CPU panel (M1 complete): `ChartWidget` (stacked series, newest sample at the right),
+  `Panel` (label + value header), framed panel stack in `MainWindow`, built-in dark
+  `Theme`. The startup benchmark now reads the clock after the whole first frame.
 
 ### Fixed
 - Build with Qt 6.5 (minimum): `tst_textatlas` used `QByteArray(std::string)`, which only

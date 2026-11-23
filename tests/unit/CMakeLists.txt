@@ -42,3 +42,8 @@ qk_add_unit_test(tst_ringbuffer
 qk_add_unit_test(tst_sampling
     SOURCES tst_sampling.cpp
     LIBS qkrellm_core)
+
+qk_add_unit_test(tst_panels
+    SOURCES tst_panels.cpp
+    LIBS qkrellm_ui ${CMAKE_DL_LIBS})
+set_target_properties(tst_panels PROPERTIES ENABLE_EXPORTS ON)
