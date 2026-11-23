@@ -8,6 +8,7 @@
 #include "core/monitors/hwmonmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
+#include "core/monitors/systemmonitor.h"
 #include "core/sampler.h"
 #include "core/version.h"
 #include "ui/mainwindow.h"
@@ -18,7 +19,9 @@
 
 #include <chrono>
 #include <cstdio>
+#include <ctime>
 #include <memory>
+#include <optional>
 
 namespace {
 // Enough history for a chart a few hundred pixels wide (one sample per pixel column).
@@ -78,6 +81,55 @@ void addBatteryPanel(qk::ui::MainWindow& window, const qk::core::MetricRegistry&
             },
     });
 }
+
+std::tm localNow()
+{
+    const std::time_t now = std::time(nullptr);
+    std::tm local{};
+    ::localtime_r(&now, &local);
+    return local;
+}
+
+/// "11-23 14:45": month-day and local time (follows the sampler, so within a second).
+void addClockPanel(qk::ui::MainWindow& window)
+{
+    window.addPanel({
+        .labelText =
+            [](qk::ui::TextBuffer& buffer) {
+                const std::tm t = localNow();
+                return qk::ui::formatPair(buffer, t.tm_mon + 1, u'-', t.tm_mday);
+            },
+        .valueText =
+            [](qk::ui::TextBuffer& buffer) {
+                const std::tm t = localNow();
+                return qk::ui::formatPair(buffer, t.tm_hour, u':', t.tm_min);
+            },
+    });
+}
+
+void addLoadPanel(qk::ui::MainWindow& window, const qk::core::MetricRegistry& registry,
+                  qk::core::MetricHandle load)
+{
+    window.addPanel({
+        .label = QStringLiteral("Load"),
+        .valueText =
+            [reg = &registry, load](qk::ui::TextBuffer& buffer) {
+                return qk::ui::formatLoad(buffer, latestOf(*reg, load));
+            },
+    });
+}
+
+void addUptimePanel(qk::ui::MainWindow& window, const qk::core::MetricRegistry& registry,
+                    qk::core::MetricHandle uptime)
+{
+    window.addPanel({
+        .label = QStringLiteral("Up"),
+        .valueText =
+            [reg = &registry, uptime](qk::ui::TextBuffer& buffer) {
+                return qk::ui::formatUptime(buffer, latestOf(*reg, uptime));
+            },
+    });
+}
 } // namespace
 
 int main(int argc, char* argv[])
@@ -111,6 +163,7 @@ int main(int argc, char* argv[])
     if (!net->isValid()) {
         qWarning("qkrellm: cannot read /proc/net/dev; network monitor disabled");
     }
+    auto system = std::make_unique<qk::core::SystemMonitor>(registry);
     auto mem = std::make_unique<qk::core::MemoryMonitor>(registry);
     if (!mem->isValid()) {
         qWarning("qkrellm: cannot read /proc/meminfo; memory monitor disabled");
@@ -118,6 +171,7 @@ int main(int argc, char* argv[])
 
     qk::ui::MainWindow window(registry);
     const qk::ui::Theme& theme = window.theme();
+    addClockPanel(window);
     window.addPanel({
         .label = QStringLiteral("CPU"),
         .valueMetric = cpu->busy(),
@@ -127,6 +181,9 @@ int main(int argc, char* argv[])
                 {.metric = cpu->user(), .color = theme.seriesPrimary},
             },
     });
+    if (system->hasLoad()) {
+        addLoadPanel(window, registry, system->load1());
+    }
     window.addPanel({
         .label = QStringLiteral("Mem"),
         .valueMetric = mem->usedBytes(),
@@ -183,6 +240,7 @@ int main(int argc, char* argv[])
     if (battery->hasBattery()) {
         addBatteryPanel(window, registry, *battery);
     }
+    addUptimePanel(window, registry, system->uptime());
     sampler.addMonitor(std::move(cpu));
     sampler.addMonitor(std::move(mem));
     sampler.addMonitor(std::move(disk));
@@ -190,6 +248,7 @@ int main(int argc, char* argv[])
     sampler.addMonitor(std::move(net));
     sampler.addMonitor(std::move(hwmon));
     sampler.addMonitor(std::move(battery));
+    sampler.addMonitor(std::move(system));
     QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, &qk::ui::MainWindow::refresh);
 
     if (parser.isSet(exitAfterFirstPaint)) {

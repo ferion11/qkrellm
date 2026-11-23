@@ -7,6 +7,7 @@
 #include "core/monitors/hwmonmonitor.h"
 #include "core/monitors/memorymonitor.h"
 #include "core/monitors/netmonitor.h"
+#include "core/monitors/systemmonitor.h"
 #include "core/sampler.h"
 #include "sensors/cpuusage.h"
 #include "sensors/procstat.h"
@@ -94,6 +95,7 @@ using qk::core::MetricUnit;
 using qk::core::Monitor;
 using qk::core::NetMonitor;
 using qk::core::Sampler;
+using qk::core::SystemMonitor;
 
 QString fixtureDir()
 {
@@ -533,6 +535,30 @@ private slots:
         QCOMPARE(other.history(none.ac()).latest(), 0.0F);
     }
 
+    void systemMonitorLoadAndUptime()
+    {
+        MetricRegistry registry(8);
+        SystemMonitor system(registry, qPrintable(fixtureDir() + QStringLiteral("loadavg")));
+        QVERIFY(system.hasLoad());
+        QCOMPARE(system.periodTicks(), SystemMonitor::kPeriodTicks);
+        QCOMPARE(registry.history(system.load1()).latest(), 0.63F); // read at construction
+        QCOMPARE(registry.history(system.load15()).latest(), 2.27F);
+        QFile uptimeFile(QStringLiteral("/proc/uptime"));
+        QVERIFY(uptimeFile.open(QIODevice::ReadOnly));
+        const double kernel = uptimeFile.readAll().split(' ').front().toDouble();
+        QVERIFY(std::abs(static_cast<double>(registry.history(system.uptime()).latest()) - kernel) <
+                5.0); // same clock as /proc/uptime
+        system.sample();
+        QCOMPARE(registry.history(system.load5()).size(), std::size_t{2});
+
+        MetricRegistry other(8);
+        SystemMonitor missing(other, "/nonexistent/qkrellm/loadavg");
+        QVERIFY(!missing.hasLoad());
+        missing.sample();
+        QVERIFY(other.history(missing.load1()).empty());
+        QCOMPARE(other.history(missing.uptime()).size(), std::size_t{2}); // still works
+    }
+
     void samplerHonoursPeriodsAndSignals()
     {
         Sampler sampler(std::chrono::milliseconds(1000));
@@ -584,6 +610,7 @@ private slots:
         sampler.addMonitor(std::move(hwmon));
         sampler.addMonitor(std::make_unique<BatteryMonitor>(registry));    // real power_supply
         sampler.addMonitor(std::make_unique<FilesystemMonitor>(registry)); // real mounts
+        sampler.addMonitor(std::make_unique<SystemMonitor>(registry));     // real loadavg
         auto net = std::make_unique<NetMonitor>(registry); // real /proc/net/dev + sysfs
         QVERIFY(net->isValid());
         sampler.addMonitor(std::move(net));

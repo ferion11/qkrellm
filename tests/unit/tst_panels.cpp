@@ -29,8 +29,11 @@ using qk::ui::formatBytes;
 using qk::ui::formatBytesOf;
 using qk::ui::formatCelsius;
 using qk::ui::formatDuration;
+using qk::ui::formatLoad;
+using qk::ui::formatPair;
 using qk::ui::formatPercent;
 using qk::ui::formatRpm;
+using qk::ui::formatUptime;
 using qk::ui::MainWindow;
 using qk::ui::TextBuffer;
 using qk::ui::Theme;
@@ -144,6 +147,30 @@ private slots:
         QCOMPARE(text(formatBattery(b, std::nullopt, std::nullopt)), QStringLiteral("--%"));
     }
 
+    void formatsClockUptimeAndLoad()
+    {
+        TextBuffer b{};
+        QCOMPARE(text(formatPair(b, 9, u':', 5)), QStringLiteral("09:05"));
+        QCOMPARE(text(formatPair(b, 11, u'-', 23)), QStringLiteral("11-23"));
+        QCOMPARE(text(formatPair(b, -1, u':', 250)), QStringLiteral("00:99"));
+        QCOMPARE(text(formatUptime(b, 0.0)), QStringLiteral("0:00"));
+        QCOMPARE(text(formatUptime(b, 479.0)), QStringLiteral("0:07")); // truncates
+        QCOMPARE(text(formatUptime(b, 42645.0)), QStringLiteral("11:50"));
+        QCOMPARE(text(formatUptime(b, 86399.0)), QStringLiteral("23:59"));
+        QCOMPARE(text(formatUptime(b, (3.0 * 86400) + (4 * 3600) + 300)),
+                 QStringLiteral("3d 4:05"));
+        QCOMPARE(text(formatUptime(b, std::nullopt)), QStringLiteral("--"));
+        QCOMPARE(text(formatUptime(b, -1.0)), QStringLiteral("--"));
+        QVERIFY(!formatUptime(b, 1e300).isEmpty()); // capped, must not overflow
+        QCOMPARE(text(formatLoad(b, 0.0F)), QStringLiteral("0.00"));
+        QCOMPARE(text(formatLoad(b, 0.63F)), QStringLiteral("0.63"));
+        QCOMPARE(text(formatLoad(b, 2.05F)), QStringLiteral("2.05"));
+        QCOMPARE(text(formatLoad(b, 9.999F)), QStringLiteral("10.0"));
+        QCOMPARE(text(formatLoad(b, 12.34F)), QStringLiteral("12.3"));
+        QCOMPARE(text(formatLoad(b, 99.97F)), QStringLiteral("100"));
+        QCOMPARE(text(formatLoad(b, std::nullopt)), QStringLiteral("--"));
+    }
+
     void dynamicLabelAndValue()
     {
         MetricRegistry registry(8);
@@ -211,6 +238,9 @@ private slots:
             QVERIFY(fits(u"Mem", u"7.1G/62G"));
             QVERIFY(fits(u"Temp", u"100\u00B0C"));
             QVERIFY(fits(u"/home", u"100%"));
+            QVERIFY(fits(u"11-23", u"14:45"));
+            QVERIFY(fits(u"Load", u"12.3"));
+            QVERIFY(fits(u"Up", u"365d 23:59"));
             QVERIFY(fits(u"iwlwifi_1", u"45\u00B0C"));
         }
     }

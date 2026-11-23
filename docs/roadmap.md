@@ -42,7 +42,7 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       populating the font database
 - [x] Budget met with the real CPU panel (xcb: 39 ms, 2.7 MiB private, CPU 0 ‰ over 30 s)
 
-## M2 — Built-in monitors
+## M2 — Built-in monitors ✅
 
 - [x] Memory/swap (`/proc/meminfo`): `sensors/meminfo` (+ fuzzer), `MemoryMonitor`
       (levels pushed at construction), "Mem" panel (used + cache) and "Swap" panel (only
@@ -76,7 +76,9 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 - [x] Filesystems (`statvfs` on `/proc/self/mounts` entries): `sensors/mounts` (parser with
       octal unescaping, disk-mount selection, df-like usage; + fuzzer), `FilesystemMonitor`
       (every 10 s, injectable statvfs), one "/home 25%" row per local disk filesystem
-- [ ] Clock / uptime / load
+- [x] Clock / uptime / load: `sensors/loadavg` (+ fuzzer), `SystemMonitor` (load every 5 s as
+      the kernel does; uptime from CLOCK_BOOTTIME), "11-23 14:45", "Load" and "Up" rows
+- [x] Budget met at the end of M2, with little margin (see resource-budget.md)
 
 ## M3 — Configuration and themes
 
@@ -101,15 +103,14 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## Next steps
 
-M2 in progress, one monitor per branch with the `new-monitor` skill (fixtures from ≥ 2
-machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel,
-`benchmarks/measure.sh` within ADR 0013's 2 ‰):
+M2 is complete. Before or during M3:
 
-1. Clock / uptime / load (`/proc/uptime`, `/proc/loadavg`): uses `PanelSpec::valueText`;
-   last M2 item, then close M2 (README status, budget table) and plan M3.
-2. Pending fixtures: a second machine's sysfs tree (`tests/fixtures/capture-sys.sh
-   linux-6.18.18-manjaro-28cpu` on the maintainer's Manjaro box → tarball): hwmon +
-   power_supply.
-Open questions: devices/sensors that appear after startup are not shown — revisit with M3
-config (also: choosing which hwmon sensors to show, per-CPU / per-disk charts); swap panel
-when swap is enabled after startup.
+1. CPU headroom is only ~0.3–0.5 ‰ (budget 2 ‰) and runs vary by ~0.7 ‰: make
+   `measure.sh` take several runs before optimising or adding per-tick work.
+2. Second-machine fixtures still missing: hwmon + power_supply (`tests/fixtures/capture-sys.sh
+   <tag>`), /proc/meminfo, /proc/self/mounts and /proc/loadavg (`tests/fixtures/capture.sh`).
+   The meminfo swap fixture is the same machine with swap enabled.
+3. The `new-monitor` recipe asks for a `perf-reviewer` pass; it was not run for the M2 monitors.
+4. Plan M3 (config and themes). Open questions for it: which hwmon sensors/filesystems/
+   interfaces to show, per-CPU and per-disk charts, devices appearing after startup, swap
+   enabled after startup, date/time format.

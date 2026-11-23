@@ -134,6 +134,70 @@ QStringView formatDuration(TextBuffer& buffer, std::optional<double> seconds)
     return view(buffer, n);
 }
 
+QStringView formatUptime(TextBuffer& buffer, std::optional<double> seconds)
+{
+    std::size_t n = 0;
+    if (!seconds || std::isnan(*seconds) || *seconds < 0.0) {
+        buffer.at(n++) = u'-';
+        buffer.at(n++) = u'-';
+        return view(buffer, n);
+    }
+    constexpr long long kMinutesPerDay = 24LL * 60;
+    const auto minutes = static_cast<long long>(std::min(*seconds, 1e11) / 60.0);
+    const long long days = minutes / kMinutesPerDay;
+    if (days > 0) {
+        appendUnsigned(buffer, n, days);
+        buffer.at(n++) = u'd';
+        buffer.at(n++) = u' ';
+    }
+    const long long rest = minutes % kMinutesPerDay;
+    appendUnsigned(buffer, n, rest / 60);
+    buffer.at(n++) = u':';
+    buffer.at(n++) = static_cast<char16_t>(u'0' + ((rest % 60) / 10));
+    buffer.at(n++) = static_cast<char16_t>(u'0' + (rest % 10));
+    return view(buffer, n);
+}
+
+QStringView formatLoad(TextBuffer& buffer, std::optional<float> load)
+{
+    std::size_t n = 0;
+    if (!load || std::isnan(*load) || *load < 0.0F) {
+        buffer.at(n++) = u'-';
+        buffer.at(n++) = u'-';
+        return view(buffer, n);
+    }
+    const double value = std::min(static_cast<double>(*load), 99999.0);
+    const long long hundredths = std::llround(value * 100.0);
+    const long long tenths = std::llround(value * 10.0);
+    if (hundredths < 1000) { // "9.99"; 9.996 rounds to 1000 and prints "10.0"
+        appendUnsigned(buffer, n, hundredths / 100);
+        buffer.at(n++) = u'.';
+        appendUnsigned(buffer, n, (hundredths % 100) / 10);
+        appendUnsigned(buffer, n, hundredths % 10);
+    } else if (tenths < 1000) {
+        appendUnsigned(buffer, n, tenths / 10);
+        buffer.at(n++) = u'.';
+        appendUnsigned(buffer, n, tenths % 10);
+    } else {
+        appendUnsigned(buffer, n, std::llround(value));
+    }
+    return view(buffer, n);
+}
+
+QStringView formatPair(TextBuffer& buffer, int first, char16_t separator, int second)
+{
+    std::size_t n = 0;
+    const auto twoDigits = [&](int value) {
+        const int v = std::clamp(value, 0, 99);
+        buffer.at(n++) = static_cast<char16_t>(u'0' + (v / 10));
+        buffer.at(n++) = static_cast<char16_t>(u'0' + (v % 10));
+    };
+    twoDigits(first);
+    buffer.at(n++) = separator;
+    twoDigits(second);
+    return view(buffer, n);
+}
+
 QStringView formatBattery(TextBuffer& buffer, std::optional<float> fraction,
                           std::optional<double> secondsLeft)
 {

@@ -32,6 +32,8 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- Clock, load and uptime (M2): `/proc/loadavg` parser (+ fuzzer), `SystemMonitor`, rows
+  "11-23 14:45", "Load 0.63" and "Up 3d 4:05". M2 is complete.
 - Filesystem monitor (M2): `/proc/self/mounts` parser (+ fuzzer), local disk mount
   selection (one mount per device, no squashfs), df-like usage from statvfs,
   `FilesystemMonitor` (every 10 s); one "/home 25%" row per filesystem.

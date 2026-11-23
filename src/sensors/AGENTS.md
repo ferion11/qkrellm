@@ -3,6 +3,7 @@
 Contents (ADR 0005), one `.h/.cpp` pair each:
 - `textscan` — shared allocation-free tokenizing; `sysfsvalue` — one-integer sysfs files.
 - `procstat` + `cpuusage` — /proc/stat and CPU usage deltas.
+- `loadavg` — /proc/loadavg (locale-independent decimals).
 - `meminfo` — /proc/meminfo and memory usage derivation.
 - `netdev` — /proc/net/dev; `rate` — `counterRate` for monotonically increasing counters.
 - `diskstats` — /proc/diskstats and `parseBlockStat` for /sys/block/<disk>/stat (what the

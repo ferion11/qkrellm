@@ -8,6 +8,8 @@ add_library(qkrellm_sensors STATIC
     diskstats.h
     hwmon.cpp
     hwmon.h
+    loadavg.cpp
+    loadavg.h
     meminfo.cpp
     meminfo.h
     mounts.cpp

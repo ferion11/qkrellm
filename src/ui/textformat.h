@@ -28,6 +28,17 @@ using TextBuffer = std::array<char16_t, 32>;
 [[nodiscard]] QStringView formatBattery(TextBuffer& buffer, std::optional<float> fraction,
                                         std::optional<double> secondsLeft);
 
+/// Elapsed time, truncated to the minute: "0:07", "11:50", "3d 4:05"; "--" without a value.
+[[nodiscard]] QStringView formatUptime(TextBuffer& buffer, std::optional<double> seconds);
+
+/// Load average with about three significant digits: "0.63", "12.3", "120"; "--" without a
+/// value.
+[[nodiscard]] QStringView formatLoad(TextBuffer& buffer, std::optional<float> load);
+
+/// Two zero-padded numbers: formatPair(b, 9, ':', 5) -> "09:05" (clock), '-' for "11-23" (date).
+/// Values are clamped to 0..99.
+[[nodiscard]] QStringView formatPair(TextBuffer& buffer, int first, char16_t separator, int second);
+
 /// Compact binary size: at most 3 significant digits and a one-letter unit (B K M G T P E,
 /// powers of 1024), e.g. "512B", "1.5K", "3.2G", "62G", "999M". One decimal below 10 (except
 /// bytes); a value of 1000 or more moves to the next unit; capped at "999E". "--" when there is no

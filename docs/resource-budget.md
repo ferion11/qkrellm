@@ -68,6 +68,31 @@ From here on CPU is measured exactly from `/proc/<pid>/schedstat` (ADR 0013):
 | + battery, /sys/block disks, hwmon tiers, header/chart repaint skipping, chart scrolling | 46 ms | 2.8 MiB | 1.0 ‰ (offscreen), 1.2–1.4 ‰ (xcb) |
 | GKrellM 2 on the same machine, same method (for reference) | — | 6.2 MiB | 6.1 ‰ |
 
+### End of M2 and errata to ADR 0013 (2026-11-23)
+
+Old commits rebuilt and measured back to back (xcb, release, 60 s, schedstat, two rounds):
+
+| Commit | CPU, round 1 / 2 |
+|---|---|
+| 26adef1 network | 1.01 / 1.25 ‰ |
+| 1ba3ec2 + disk | 1.16 / 1.33 ‰ |
+| 8c967a6 + hwmon | 1.41 / 2.10 ‰ |
+| c61c233 + battery, filesystems and the ADR 0013 optimisations | 1.51 / 1.84 ‰ |
+| + clock, load, uptime (end of M2) | 1.61 / 1.52 ‰ |
+
+`measure.sh` at the end of M2: xcb 62 ms, 2.8 MiB, 1.69 ‰; offscreen 24 ms, 2.5 MiB, 1.16 ‰.
+
+- Runs of the same binary differ by up to ~0.7 ‰: one 60 s run cannot resolve small changes,
+  and a single check near 2 ‰ can fail by chance. Compare several interleaved runs.
+- ADR 0013 says rounding hid "up to 1.9 ‰ since the network monitor". That was not measured:
+  the network commit is 1.0–1.25 ‰; values near 2 ‰ first appear with hwmon.
+- ADR 0013 says 6.3 MiB for GKrellM; 6324 kB is 6.2 MiB (one 60 s run, user's own config).
+- ADR 0013 expects 0.6–0.8 ‰ of headroom; at the end of M2 it is about 0.3–0.5 ‰.
+- The end-to-end effect of the repaint/scroll optimisations is within this noise: the
+  per-read savings were measured in isolation, a total CPU gain was not demonstrated.
+- The earlier "main before battery 1.56 ‰" row came from a stash build whose result was not
+  checked; use the table above instead.
+
 Cold per-read costs at 1 Hz (thread CPU time): /proc/stat 137 µs, /proc/diskstats 100 µs vs
 /sys/block/<disk>/stat 10–16 µs, /proc/net/dev 34 µs, /proc/meminfo 28 µs, coretemp 57 µs,
 battery uevent 357 µs (first read each second refreshes ACPI; any attribute costs that),

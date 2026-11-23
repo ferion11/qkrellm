@@ -39,6 +39,10 @@ qk_add_unit_test(tst_hwmon
     SOURCES tst_hwmon.cpp
     LIBS qkrellm_sensors Qt6::Core)
 
+qk_add_unit_test(tst_loadavg
+    SOURCES tst_loadavg.cpp
+    LIBS qkrellm_sensors Qt6::Core)
+
 qk_add_unit_test(tst_meminfo
     SOURCES tst_meminfo.cpp
     LIBS qkrellm_sensors Qt6::Core)
