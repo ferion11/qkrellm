@@ -17,6 +17,7 @@ namespace qk::sensors {
 ///   + guest                              (2.6.24)
 ///   + guest_nice                         (2.6.33)
 /// Columns missing on older kernels read as 0; `fields` says how many were present.
+/// Fixtures: tests/fixtures/proc/linux-6.18*/proc/stat (real captures).
 /// guest and guest_nice are already included in user and nice.
 struct CpuTimes
 {

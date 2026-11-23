@@ -64,6 +64,21 @@ private slots:
         QCOMPARE(s->procsBlocked.value_or(99), 0U);
     }
 
+    void parsesSecondMachineFixture()
+    {
+        const QByteArray text = fixture("linux-6.18.18-manjaro-28cpu", "stat");
+        QVERIFY(!text.isEmpty());
+        const auto s = parse(view(text));
+        QVERIFY(s);
+        QCOMPARE(s->total.fields, 10);
+        QCOMPARE(s->total.user, 4805U);
+        QCOMPARE(s->total.iowait, 4526U);
+        QCOMPARE(s->cpuSlots, 28);
+        QCOMPARE(s->cpus[27].idle, 14893U);
+        QCOMPARE(s->contextSwitches.value_or(0), 1017509U);
+        QCOMPARE(s->processesCreated.value_or(0), 9180U);
+    }
+
     void usageBetweenRealSnapshots()
     {
         const QByteArray t0 = fixture(kTag, "stat");

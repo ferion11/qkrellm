@@ -29,7 +29,8 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       deltas, `ProcFile` reader; fixtures `linux-6.18-x86_64-20cpu` (two snapshots 1 s apart);
       older column layouts (2.4 → 2.6.33) covered by edge-case tests; fuzzers for procstat
       and textatlas; `scripts/fuzz.sh`; CI fuzz job (60 s each)
-- [ ] Second real kernel fixture for /proc/stat (needs another machine/kernel)
+- [x] Second real /proc/stat fixture: `linux-6.18.18-manjaro-28cpu` (maintainer's machine;
+      same 10-column layout — older layouts stay covered by edge-case tests)
 - [ ] `core`: `RingBuffer`, `Sampler` (single coarse timer), `MetricRegistry`
 - [ ] `ui`: `ChartWidget`, `Panel`; CPU panel visible in MainWindow
 - [ ] Budget still met (`measure.sh --check`)
@@ -71,5 +72,3 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
    monitor using `qkrellm_sensors` (`ProcFile("/proc/stat")` + `parseProcStat` +
    `computeUsage`). No allocation per tick.
 2. `ui`: `ChartWidget` + `Panel` with text via `TextRenderer`; show the CPU panel.
-3. Ask the maintainer for a `/proc/stat` capture from another kernel/machine
-   (`tests/fixtures/capture.sh <tag> /proc/stat`) to satisfy the "≥ 2 kernels" rule.
