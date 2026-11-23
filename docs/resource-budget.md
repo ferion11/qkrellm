@@ -48,6 +48,13 @@ History: `/tmp/qkrellm/bench/results.tsv` (date, commit, startup, private, pss, 
 | offscreen | 19 ms | 2.2 MiB | 11.4 MiB | 29 MiB | 0 ‰ |
 | xcb | 39 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 0 ‰ |
 
+## M2 memory panel (2026-11-23): CPU + Mem panels (no swap on this machine), same setup
+
+| Platform | startup | private | PSS | RSS | CPU |
+|---|---|---|---|---|---|
+| offscreen | 20 ms | 2.2 MiB | 11.4 MiB | 29 MiB | 0 ‰ |
+| xcb | 43 ms | 2.7 MiB | 12.6 MiB | 32 MiB | 0 ‰ |
+
 M0 findings (before bitmap text):
 - ~41 MiB of RSS is file-backed and shared: libQt6Gui/Widgets/Core (~17 MiB),
   two fontconfig caches (~8 MiB), locale archive (~2 MiB), libstdc++.

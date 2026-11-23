@@ -15,7 +15,7 @@ bin="$out/build/fuzz/tests/fuzz"
 
 cd "$repo"
 cmake --preset fuzz >/dev/null
-cmake --build --preset fuzz --target fuzz_procstat fuzz_textatlas
+cmake --build --preset fuzz --target fuzz_procstat fuzz_meminfo fuzz_textatlas
 
 seed() { # <fuzzer> <files...>
     local corpus="$out/fuzz/corpus/$1"
@@ -24,10 +24,11 @@ seed() { # <fuzzer> <files...>
     for f in "$@"; do cp -f "$f" "$corpus/seed-$(basename "$(dirname "$f")")-$(basename "$f")"; done
 }
 seed fuzz_procstat tests/fixtures/proc/*/proc/stat*
+seed fuzz_meminfo tests/fixtures/proc/*/proc/meminfo*
 seed fuzz_textatlas src/ui/fonts/*.qkatlas
 
 status=0
-for fuzzer in fuzz_procstat fuzz_textatlas; do
+for fuzzer in fuzz_procstat fuzz_meminfo fuzz_textatlas; do
     crashes="$out/fuzz/crashes/$fuzzer"
     rm -rf "$crashes" && mkdir -p "$crashes" # only report crashes from this run
     echo "== $fuzzer (${seconds}s)"

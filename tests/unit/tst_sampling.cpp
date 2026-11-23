@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
+#include "core/monitors/memorymonitor.h"
 #include "core/sampler.h"
 #include "sensors/cpuusage.h"
 #include "sensors/procstat.h"
@@ -76,6 +77,7 @@ void operator delete[](void* p, std::size_t /*size*/) noexcept
 namespace {
 
 using qk::core::CpuMonitor;
+using qk::core::MemoryMonitor;
 using qk::core::MetricRegistry;
 using qk::core::MetricUnit;
 using qk::core::Monitor;
@@ -176,6 +178,54 @@ private slots:
         QVERIFY(registry.history(cpu.busy()).empty());
     }
 
+    void memoryMonitorReadsFixture()
+    {
+        MetricRegistry registry(8);
+        const QString path = fixtureDir() + QStringLiteral("meminfo");
+        MemoryMonitor mem(registry, qPrintable(path));
+        QVERIFY(mem.isValid());
+        QVERIFY(!mem.hasSwap()); // fixture machine has no swap
+        // A level, not a rate: the first sample is pushed at construction.
+        QCOMPARE(registry.history(mem.used()).size(), std::size_t{1});
+        constexpr double kKiB = 1024.0;
+        QCOMPARE(registry.history(mem.totalBytes()).latest(), static_cast<float>(65426260 * kKiB));
+        QCOMPARE(registry.history(mem.usedBytes()).latest(),
+                 static_cast<float>((65426260 - 59654248) * kKiB));
+        QCOMPARE(registry.history(mem.used()).latest(),
+                 static_cast<float>((65426260.0 - 59654248.0) / 65426260.0));
+        QCOMPARE(registry.history(mem.cache()).latest(),
+                 static_cast<float>((220368.0 + 5239956.0 + 117468.0) / 65426260.0));
+        QCOMPARE(registry.history(mem.swapUsed()).latest(), 0.0F);
+        QCOMPARE(registry.info(mem.swapUsed()).id, std::string("swap.used"));
+        mem.sample();
+        QCOMPARE(registry.history(mem.used()).size(), std::size_t{2});
+    }
+
+    void memoryMonitorDetectsSwap()
+    {
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("meminfo"));
+        QVERIFY(rewrite(path, "MemTotal: 1000 kB\nMemAvailable: 750 kB\n"
+                              "SwapTotal: 400 kB\nSwapFree: 300 kB\n"));
+        MetricRegistry registry(8);
+        MemoryMonitor mem(registry, qPrintable(path));
+        QVERIFY(mem.isValid());
+        QVERIFY(mem.hasSwap());
+        QCOMPARE(registry.history(mem.used()).latest(), 0.25F);
+        QCOMPARE(registry.history(mem.swapUsed()).latest(), 0.25F);
+        QCOMPARE(registry.history(mem.swapTotalBytes()).latest(), 400.0F * 1024.0F);
+    }
+
+    void memoryMonitorSurvivesMissingFile()
+    {
+        MetricRegistry registry(8);
+        MemoryMonitor mem(registry, "/nonexistent/qkrellm/meminfo");
+        QVERIFY(!mem.isValid());
+        QVERIFY(!mem.hasSwap());
+        mem.sample(); // must not crash or push
+        QVERIFY(registry.history(mem.used()).empty());
+    }
+
     void samplerHonoursPeriodsAndSignals()
     {
         Sampler sampler(std::chrono::milliseconds(1000));
@@ -215,6 +265,9 @@ private slots:
         auto cpu = std::make_unique<CpuMonitor>(registry, "/proc/stat"); // real kernel file
         QVERIFY(cpu->isValid());
         sampler.addMonitor(std::move(cpu));
+        auto mem = std::make_unique<MemoryMonitor>(registry, "/proc/meminfo");
+        QVERIFY(mem->isValid());
+        sampler.addMonitor(std::move(mem));
         int observed = 0;
         connect(&sampler, &Sampler::sampled, this, [&observed] { ++observed; });
 

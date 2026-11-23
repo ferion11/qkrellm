@@ -22,6 +22,10 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- Memory/swap monitor (M2): `/proc/meminfo` parser and usage derivation (procps-ng 4
+  "used"; pre-3.14 fallback), `MemoryMonitor`, fuzzer; "Mem" panel (used + cache stacked,
+  "7.0G/62G" header) and a "Swap" panel when swap is configured; `formatBytes` /
+  `formatBytesOf` and `ValueFormat` for panel headers.
 - Continuous AppImage (x86_64): `scripts/make-appimage.sh` (pinned linuxdeploy + Qt
   plugin) and `.github/workflows/appimage.yml`, which publishes every push to `main` as the
   `continuous-master` pre-release (with zsync update information). Application icon.

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/metricregistry.h"
 #include "fontconfigprobe.h"
+#include "ui/bitmaptextrenderer.h"
 #include "ui/chartwidget.h"
 #include "ui/mainwindow.h"
 #include "ui/panel.h"
@@ -16,7 +17,10 @@
 
 using qk::core::MetricRegistry;
 using qk::core::MetricUnit;
+using qk::ui::BitmapTextRenderer;
 using qk::ui::ChartWidget;
+using qk::ui::formatBytes;
+using qk::ui::formatBytesOf;
 using qk::ui::formatPercent;
 using qk::ui::MainWindow;
 using qk::ui::TextBuffer;
@@ -55,6 +59,60 @@ private slots:
         QCOMPARE(text(formatPercent(b, std::nullopt)), QStringLiteral("--%"));
         QCOMPARE(text(formatPercent(b, std::numeric_limits<float>::quiet_NaN())),
                  QStringLiteral("--%"));
+    }
+
+    void formatsBytes_data()
+    {
+        QTest::addColumn<double>("bytes");
+        QTest::addColumn<QString>("expected");
+        constexpr double kK = 1024.0;
+        QTest::newRow("zero") << 0.0 << "0B";
+        QTest::newRow("bytes") << 512.0 << "512B";
+        QTest::newRow("999 B") << 999.0 << "999B";
+        QTest::newRow("1000 B -> K") << 1000.0 << "1.0K";
+        QTest::newRow("1.5K") << 1.5 * kK << "1.5K";
+        QTest::newRow("9.96K rounds up") << 9.96 * kK << "10K";
+        QTest::newRow("123M") << 123.4 * kK * kK << "123M";
+        QTest::newRow("999.4M") << 999.4 * kK * kK << "999M";
+        QTest::newRow("1000M -> G") << 1000.0 * kK * kK << "1.0G";
+        QTest::newRow("3.2G") << 3.24 * kK * kK * kK << "3.2G";
+        QTest::newRow("62G") << 65426260.0 * kK << "62G";
+        QTest::newRow("2T") << 2.0 * kK * kK * kK * kK << "2.0T";
+        QTest::newRow("16 EiB (uint64 max)") << 18446744073709551615.0 << "16E";
+        QTest::newRow("beyond: capped") << 1e30 << "999E";
+    }
+    void formatsBytes()
+    {
+        QFETCH(double, bytes);
+        QFETCH(QString, expected);
+        TextBuffer b{};
+        QCOMPARE(text(formatBytes(b, bytes)), expected);
+    }
+
+    void formatsMissingBytes()
+    {
+        TextBuffer b{};
+        QCOMPARE(text(formatBytes(b, std::nullopt)), QStringLiteral("--"));
+        QCOMPARE(text(formatBytes(b, -1.0)), QStringLiteral("--"));
+        QCOMPARE(text(formatBytes(b, std::numeric_limits<double>::quiet_NaN())),
+                 QStringLiteral("--"));
+        QCOMPARE(text(formatBytesOf(b, 5.5 * 1024 * 1024 * 1024, 62.0 * 1024 * 1024 * 1024)),
+                 QStringLiteral("5.5G/62G"));
+        QCOMPARE(text(formatBytesOf(b, std::nullopt, 1024.0)), QStringLiteral("--/1.0K"));
+    }
+
+    void widestHeaderFitsPanel()
+    {
+        // Longest label + longest "used/total" value must fit side by side (with a gap)
+        // in the default panel width, at both atlas scales.
+        for (const qreal dpr : {1.0, 2.0}) {
+            const auto r = BitmapTextRenderer::load(QStringLiteral(":/qkrellm/fonts/default"), dpr);
+            QVERIFY(r);
+            const Theme theme;
+            const int used = r->horizontalAdvance(u"Swap") + r->horizontalAdvance(u"1000M/1000M") +
+                             (3 * theme.panelPadding);
+            QVERIFY2(used <= theme.panelWidth, qPrintable(QString::number(used)));
+        }
     }
 
     void chartStacksSeriesNewestAtRight()

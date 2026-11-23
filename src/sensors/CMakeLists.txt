@@ -4,6 +4,8 @@
 add_library(qkrellm_sensors STATIC
     cpuusage.cpp
     cpuusage.h
+    meminfo.cpp
+    meminfo.h
     procfile.cpp
     procfile.h
     procstat.cpp

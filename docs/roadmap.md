@@ -44,7 +44,9 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## M2 — Built-in monitors
 
-- [ ] Memory/swap (`/proc/meminfo`)
+- [x] Memory/swap (`/proc/meminfo`): `sensors/meminfo` (+ fuzzer), `MemoryMonitor`
+      (levels pushed at construction), "Mem" panel (used + cache) and "Swap" panel (only
+      when swap exists at startup); `formatBytes` ("3.2G") and `ValueFormat` in panel headers
 - [ ] Network (`/proc/net/dev`), per-interface
 - [ ] Disk I/O (`/proc/diskstats`)
 - [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)
@@ -75,13 +77,12 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## Next steps
 
-M1 is complete. Start M2 (built-in monitors), one monitor per branch, each with the
-`new-monitor` skill (fixtures from ≥ 2 machines, pure parser, fuzzer, allocation-free
-sampling covered by a `tst_sampling`-style probe, a panel):
+M2 in progress, one monitor per branch with the `new-monitor` skill (fixtures from ≥ 2
+machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a panel):
 
-1. Memory/swap (`/proc/meminfo`) — simplest next parser; panel with a used/total chart and
-   value text. Needs a non-percent value formatter (bytes → "3.2G") in `ui/textformat`.
-2. Then network (`/proc/net/dev`, rates need a bytes/s chart scale — first non-Fraction
-   metric: decide chart autoscaling).
-Open questions to settle early in M2: chart scaling for non-Fraction metrics; per-CPU charts
-(currently aggregate only) as a config option in M3.
+1. Network (`/proc/net/dev`), per-interface rx/tx rates — first rate metric that is not a
+   fraction: decide chart autoscaling (e.g. per-chart max over the visible window, rounded
+   to a "nice" value, with the scale shown in the header) and record it in an ADR.
+2. Disk I/O (`/proc/diskstats`) reuses the same rate + autoscale machinery.
+Open questions: per-CPU charts (aggregate only today) as a config option in M3; whether
+the swap panel should appear when swap is enabled after startup.

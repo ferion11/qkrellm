@@ -2,6 +2,7 @@
 #include "app/startupprobe.h"
 #include "core/metricregistry.h"
 #include "core/monitors/cpumonitor.h"
+#include "core/monitors/memorymonitor.h"
 #include "core/sampler.h"
 #include "core/version.h"
 #include "ui/mainwindow.h"
@@ -43,6 +44,10 @@ int main(int argc, char* argv[])
     if (!cpu->isValid()) {
         qWarning("qkrellm: cannot read /proc/stat; CPU monitor disabled");
     }
+    auto mem = std::make_unique<qk::core::MemoryMonitor>(registry);
+    if (!mem->isValid()) {
+        qWarning("qkrellm: cannot read /proc/meminfo; memory monitor disabled");
+    }
 
     qk::ui::MainWindow window(registry);
     const qk::ui::Theme& theme = window.theme();
@@ -55,7 +60,28 @@ int main(int argc, char* argv[])
                 {.metric = cpu->user(), .color = theme.seriesPrimary},
             },
     });
+    window.addPanel({
+        .label = QStringLiteral("Mem"),
+        .valueMetric = mem->usedBytes(),
+        .valueFormat = qk::ui::ValueFormat::Bytes,
+        .totalMetric = mem->totalBytes(),
+        .series =
+            {
+                {.metric = mem->used(), .color = theme.seriesPrimary},
+                {.metric = mem->cache(), .color = theme.seriesMuted},
+            },
+    });
+    if (mem->hasSwap()) {
+        window.addPanel({
+            .label = QStringLiteral("Swap"),
+            .valueMetric = mem->swapUsedBytes(),
+            .valueFormat = qk::ui::ValueFormat::Bytes,
+            .totalMetric = mem->swapTotalBytes(),
+            .series = {{.metric = mem->swapUsed(), .color = theme.seriesSecondary}},
+        });
+    }
     sampler.addMonitor(std::move(cpu));
+    sampler.addMonitor(std::move(mem));
     QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, &qk::ui::MainWindow::refresh);
 
     if (parser.isSet(exitAfterFirstPaint)) {

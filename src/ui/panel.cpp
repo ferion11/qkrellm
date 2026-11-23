@@ -18,6 +18,8 @@ Panel::Panel(const core::MetricRegistry& registry, PanelSpec spec, const TextRen
     , m_registry(&registry)
     , m_label(std::move(spec.label))
     , m_valueMetric(spec.valueMetric)
+    , m_valueFormat(spec.valueFormat)
+    , m_totalMetric(spec.totalMetric)
     , m_text(&text)
     , m_theme(&theme)
 {
@@ -60,14 +62,34 @@ void Panel::paintEvent(QPaintEvent* /*event*/)
     const int pad = m_theme->panelPadding;
     m_text->draw(painter, QPoint(pad, pad), m_label, m_theme->dimText);
 
-    if (m_valueMetric) {
-        const auto& history = m_registry->history(*m_valueMetric);
-        TextBuffer buffer{};
-        const QStringView value =
-            formatPercent(buffer, history.empty() ? std::nullopt : std::optional(history.latest()));
-        m_text->draw(painter, QPoint(width() - pad - m_text->horizontalAdvance(value), pad), value,
-                     m_theme->text);
+    if (!m_valueMetric) {
+        return;
     }
+    TextBuffer buffer{};
+    QStringView value;
+    switch (m_valueFormat) {
+    case ValueFormat::Percent:
+        value = formatPercent(buffer, latest(m_valueMetric));
+        break;
+    case ValueFormat::Bytes:
+        if (m_totalMetric) {
+            value = formatBytesOf(buffer, latest(m_valueMetric), latest(m_totalMetric));
+        } else {
+            value = formatBytes(buffer, latest(m_valueMetric));
+        }
+        break;
+    }
+    m_text->draw(painter, QPoint(width() - pad - m_text->horizontalAdvance(value), pad), value,
+                 m_theme->text);
+}
+
+std::optional<float> Panel::latest(std::optional<core::MetricHandle> metric) const
+{
+    if (!metric) {
+        return std::nullopt;
+    }
+    const auto& history = m_registry->history(*metric);
+    return history.empty() ? std::nullopt : std::optional(history.latest());
 }
 
 } // namespace qk::ui
