@@ -61,8 +61,8 @@ public:
 private:
     struct Active
     {
-        std::size_t index;
-        MetricHandle handle;
+        std::size_t index = 0;
+        MetricHandle handle = 0;
         sensors::ProcFile file;
         int period = 0; ///< 0 = not read yet (the first read decides)
     };

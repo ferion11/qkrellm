@@ -38,8 +38,8 @@ private:
 
     struct PerCpu
     {
-        std::size_t index; // N of "cpuN"
-        MetricHandle handle;
+        std::size_t index = 0; // N of "cpuN"
+        MetricHandle handle = 0;
     };
 
     MetricRegistry* m_registry;
