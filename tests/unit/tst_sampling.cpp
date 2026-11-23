@@ -203,6 +203,14 @@ private slots:
 
     void memoryMonitorDetectsSwap()
     {
+        {
+            MetricRegistry registry(8);
+            MemoryMonitor fromFixture(registry, QK_FIXTURES_DIR
+                                      "/proc/linux-6.18-x86_64-20cpu-swap/proc/meminfo");
+            QVERIFY(fromFixture.isValid());
+            QVERIFY(fromFixture.hasSwap());
+            QCOMPARE(registry.history(fromFixture.swapTotalBytes()).latest(), 2097148.0F * 1024.0F);
+        }
         QTemporaryDir dir;
         const QString path = dir.filePath(QStringLiteral("meminfo"));
         QVERIFY(rewrite(path, "MemTotal: 1000 kB\nMemAvailable: 750 kB\n"

@@ -14,7 +14,7 @@ using qk::sensors::parseMemInfo;
 
 namespace {
 
-constexpr std::uint64_t KiB = 1024;
+constexpr std::uint64_t kKiB = 1024;
 
 QByteArray fixture(const char* tag)
 {
@@ -38,20 +38,37 @@ private slots:
         QVERIFY(!text.isEmpty());
         const auto info = parseMemInfo(view(text));
         QVERIFY(info);
-        QCOMPARE(info->memTotal.value_or(0), 65426260 * KiB);
-        QCOMPARE(info->memFree.value_or(0), 56752372 * KiB);
-        QCOMPARE(info->memAvailable.value_or(0), 59654248 * KiB);
-        QCOMPARE(info->buffers.value_or(0), 220368 * KiB);
-        QCOMPARE(info->cached.value_or(0), 5239956 * KiB); // not "SwapCached"
-        QCOMPARE(info->sReclaimable.value_or(0), 117468 * KiB);
+        QCOMPARE(info->memTotal.value_or(0), 65426260 * kKiB);
+        QCOMPARE(info->memFree.value_or(0), 56752372 * kKiB);
+        QCOMPARE(info->memAvailable.value_or(0), 59654248 * kKiB);
+        QCOMPARE(info->buffers.value_or(0), 220368 * kKiB);
+        QCOMPARE(info->cached.value_or(0), 5239956 * kKiB); // not "SwapCached"
+        QCOMPARE(info->sReclaimable.value_or(0), 117468 * kKiB);
         QCOMPARE(info->swapTotal.value_or(1), std::uint64_t{0});
         QCOMPARE(info->swapFree.value_or(1), std::uint64_t{0});
 
         const auto usage = computeMemoryUsage(*info);
-        QCOMPARE(usage.total, 65426260 * KiB);
-        QCOMPARE(usage.used, (65426260 - 59654248) * KiB);
-        QCOMPARE(usage.cache, (220368 + 5239956 + 117468) * KiB);
+        QCOMPARE(usage.total, 65426260 * kKiB);
+        QCOMPARE(usage.used, (65426260 - 59654248) * kKiB);
+        QCOMPARE(usage.cache, (220368 + 5239956 + 117468) * kKiB);
         QCOMPARE(usage.swapTotal, std::uint64_t{0});
+        QCOMPARE(usage.swapUsed, std::uint64_t{0});
+    }
+
+    void parsesRealFixtureWithSwap()
+    {
+        // Same machine with a 2 GiB swap file enabled (unused at capture time).
+        const QByteArray text = fixture("linux-6.18-x86_64-20cpu-swap");
+        QVERIFY(!text.isEmpty());
+        const auto info = parseMemInfo(view(text));
+        QVERIFY(info);
+        QCOMPARE(info->swapTotal.value_or(0), 2097148 * kKiB);
+        QCOMPARE(info->swapFree.value_or(0), 2097148 * kKiB);
+        const auto usage = computeMemoryUsage(*info);
+        QCOMPARE(usage.total, 65426260 * kKiB);
+        QCOMPARE(usage.used, (65426260 - 57851376) * kKiB);
+        QCOMPARE(usage.cache, (225484 + 5431756 + 119776) * kKiB);
+        QCOMPARE(usage.swapTotal, 2097148 * kKiB);
         QCOMPARE(usage.swapUsed, std::uint64_t{0});
     }
 
@@ -81,7 +98,7 @@ private slots:
         // 2^54 - 1 kB is the largest value that still fits in bytes.
         const auto info = parseMemInfo("MemTotal: 18014398509481983 kB");
         QVERIFY(info);
-        QCOMPARE(info->memTotal.value_or(0), 18014398509481983ULL * KiB);
+        QCOMPARE(info->memTotal.value_or(0), 18014398509481983ULL * kKiB);
     }
 
     void toleratesUnknownReorderedAndMalformedLines()
@@ -93,8 +110,8 @@ private slots:
                                        "MemTotal:  5 kB\n"   // later duplicate ignored
                                        "Cached:    100 kB"); // no final newline
         QVERIFY(info);
-        QCOMPARE(info->memTotal.value_or(0), 1000 * KiB);
-        QCOMPARE(info->cached.value_or(0), 100 * KiB);
+        QCOMPARE(info->memTotal.value_or(0), 1000 * kKiB);
+        QCOMPARE(info->cached.value_or(0), 100 * kKiB);
         QVERIFY(!info->swapFree);
         QVERIFY(!info->memAvailable);
     }
@@ -106,8 +123,8 @@ private slots:
                                        "Cached: 300 kB\nSReclaimable: 50 kB\n");
         QVERIFY(info);
         const auto usage = computeMemoryUsage(*info);
-        QCOMPARE(usage.used, 400 * KiB);
-        QCOMPARE(usage.cache, 400 * KiB);
+        QCOMPARE(usage.used, 400 * kKiB);
+        QCOMPARE(usage.cache, 400 * kKiB);
     }
 
     void swapUsage()
@@ -116,10 +133,10 @@ private slots:
                                        "SwapTotal: 2048 kB\nSwapFree: 512 kB\n");
         QVERIFY(info);
         const auto usage = computeMemoryUsage(*info);
-        QCOMPARE(usage.used, 400 * KiB);
+        QCOMPARE(usage.used, 400 * kKiB);
         QCOMPARE(usage.cache, std::uint64_t{0}); // no cache lines at all
-        QCOMPARE(usage.swapTotal, 2048 * KiB);
-        QCOMPARE(usage.swapUsed, 1536 * KiB);
+        QCOMPARE(usage.swapTotal, 2048 * kKiB);
+        QCOMPARE(usage.swapUsed, 1536 * kKiB);
     }
 
     void inconsistentNumbersSaturate()
@@ -130,13 +147,13 @@ private slots:
         QVERIFY(info);
         const auto usage = computeMemoryUsage(*info);
         QCOMPARE(usage.used, std::uint64_t{0});
-        QCOMPARE(usage.cache, 1000 * KiB); // capped so used + cache <= total
+        QCOMPARE(usage.cache, 1000 * kKiB); // capped so used + cache <= total
         QCOMPARE(usage.swapUsed, std::uint64_t{0});
 
         MemInfo old;
-        old.memTotal = 1000 * KiB;
-        old.memFree = 900 * KiB;
-        old.cached = 500 * KiB;
+        old.memTotal = 1000 * kKiB;
+        old.memFree = 900 * kKiB;
+        old.cached = 500 * kKiB;
         const auto u = computeMemoryUsage(old);
         QCOMPARE(u.used, std::uint64_t{0});
         QVERIFY(u.used + u.cache <= u.total);

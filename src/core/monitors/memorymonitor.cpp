@@ -8,7 +8,7 @@
 namespace qk::core {
 
 namespace {
-constexpr std::size_t kMeminfoCapacity = 8 * 1024; // /proc/meminfo is ~1.5 KiB
+constexpr std::size_t kMeminfoCapacity = std::size_t{8} * 1024; // /proc/meminfo is ~1.5 KiB
 
 float fraction(std::uint64_t part, std::uint64_t whole)
 {

@@ -46,7 +46,8 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 - [x] Memory/swap (`/proc/meminfo`): `sensors/meminfo` (+ fuzzer), `MemoryMonitor`
       (levels pushed at construction), "Mem" panel (used + cache) and "Swap" panel (only
-      when swap exists at startup); `formatBytes` ("3.2G") and `ValueFormat` in panel headers
+      when swap exists at startup); `formatBytes` ("3.2G") and `ValueFormat` in panel headers;
+      fixtures `linux-6.18-x86_64-20cpu` (no swap) and `…-20cpu-swap` (2 GiB swap file)
 - [ ] Network (`/proc/net/dev`), per-interface
 - [ ] Disk I/O (`/proc/diskstats`)
 - [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)
