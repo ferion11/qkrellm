@@ -14,7 +14,8 @@ mode=${1:-all}
 
 cd "$repo"
 mapfile -t sources < <(git ls-files '*.c' '*.cpp' '*.h' '*.hpp')
-mapfile -t tus < <(git ls-files 'src/*.cpp' 'tests/*.cpp' 'tools/*.cpp' 'plugins/*.c' 'tests/*.c')
+# tests/fuzz is compiled only by the 'fuzz' preset, so it is absent from the dev database.
+mapfile -t tus < <(git ls-files 'src/*.cpp' 'tests/*.cpp' 'tools/*.cpp' 'plugins/*.c' 'tests/*.c' ':!tests/fuzz/*')
 
 have() { command -v "$1" >/dev/null 2>&1; }
 status=0
@@ -62,13 +63,18 @@ PY
 
 if have clang-tidy; then
     echo "== clang-tidy"
-    clang-tidy -p "$db" --quiet "${tus[@]}" 2>/dev/null | grep -E 'warning:|error:' && status=1 || true
+    # Capture first: with pipefail, `tool | grep && status=1` would miss failures whenever
+    # the tool itself exits non-zero.
+    findings=$(clang-tidy -p "$db" --quiet "${tus[@]}" 2>/dev/null | grep -E 'warning:|error:' || true)
+    [[ -z "$findings" ]] || { echo "$findings"; status=1; }
 fi
 
 if have clazy-standalone; then
     echo "== clazy (level1)"
     mapfile -t qt_tus < <(git ls-files 'src/*.cpp')
-    clazy-standalone -p "$db" -checks=level1 --ignore-dirs="^/tmp/" --header-filter="/(src|include)/" "${qt_tus[@]}" 2>&1 | grep -E 'warning:|error:' && status=1 || true
+    findings=$(clazy-standalone -p "$db" -checks=level1 --ignore-dirs="^/tmp/" \
+        --header-filter="/(src|include)/" "${qt_tus[@]}" 2>&1 | grep -E 'warning:|error:' || true)
+    [[ -z "$findings" ]] || { echo "$findings"; status=1; }
 fi
 
 if have cppcheck; then

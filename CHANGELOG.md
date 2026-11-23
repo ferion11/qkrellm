@@ -19,6 +19,10 @@ All notable changes to this project are documented here. Format:
   and `SystemFontTextRenderer` (fallback/opt-in). Startup on X11 164 → 44 ms, private
   memory 12.0 → 2.5 MiB.
 
+- `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
+  open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
+  parsers, `scripts/fuzz.sh`, CI fuzz job.
+
 ### Changed
 - Text rendering strategy decided (ADR 0011): panels will use bitmap glyph atlases by
   default; system fonts become opt-in. Investigation numbers in `docs/resource-budget.md`.

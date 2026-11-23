@@ -26,3 +26,11 @@ qk_add_unit_test(tst_bitmaptext
     SOURCES tst_bitmaptext.cpp
     LIBS qkrellm_ui ${CMAKE_DL_LIBS})
 set_target_properties(tst_bitmaptext PROPERTIES ENABLE_EXPORTS ON)
+
+qk_add_unit_test(tst_procstat
+    SOURCES tst_procstat.cpp
+    LIBS qkrellm_sensors Qt6::Core)
+
+qk_add_unit_test(tst_procfile
+    SOURCES tst_procfile.cpp
+    LIBS qkrellm_sensors Qt6::Core)

@@ -14,9 +14,9 @@ Read `src/sensors/AGENTS.md` first. Consider delegating steps 1–4 to the `linu
    No Qt, no I/O, no exceptions. Tolerate unknown/missing fields.
 3. **Unit test** `tests/unit/tst_<name>.cpp`: every fixture tag + edge cases (empty, truncated,
    garbage, max values, counter wrap). Register with `qk_add_unit_test`.
-4. **Fuzzer** `tests/fuzz/fuzz_<name>.cpp` with `LLVMFuzzerTestOneInput` calling the parser;
-   `qk_add_fuzzer(...)`. Smoke it: `cmake --preset fuzz && cmake --build --preset fuzz` then
-   run 60 s with corpus in `/tmp/qkrellm/fuzz/corpus/<name>` seeded from the fixtures.
+4. **Fuzzer** `tests/fuzz/fuzz_<name>.cpp` with `LLVMFuzzerTestOneInput` calling the parser
+   (see `fuzz_procstat.cpp`); `qk_add_fuzzer(...)`; add it to the target list and a `seed`
+   line in `scripts/fuzz.sh`. Run `scripts/fuzz.sh 60` — CI runs the same.
 5. **Reader**: opens the file once (`O_RDONLY|O_CLOEXEC`), `pread` into a buffer sized at
    construction; returns parsed samples. Rates/deltas handle counter resets.
 6. **Core**: register metrics in the `MetricRegistry`, sampled by the single `Sampler` tick;

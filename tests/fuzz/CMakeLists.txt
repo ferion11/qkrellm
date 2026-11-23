@@ -12,6 +12,9 @@ function(qk_add_fuzzer name)
     target_compile_options(${name} PRIVATE -fsanitize=fuzzer)
     target_link_options(${name} PRIVATE -fsanitize=fuzzer)
     target_link_libraries(${name} PRIVATE ${ARG_LIBS})
+    set_target_properties(${name} PROPERTIES AUTOMOC OFF)
 endfunction()
 
-# No parsers exist yet (M0). The first one arrives in M1 with src/sensors/procstat.*.
+# Seeds: tests/fixtures (procstat) and src/ui/fonts (textatlas); scripts/fuzz.sh runs them.
+qk_add_fuzzer(fuzz_procstat SOURCES fuzz_procstat.cpp LIBS qkrellm_sensors)
+qk_add_fuzzer(fuzz_textatlas SOURCES fuzz_textatlas.cpp LIBS qkrellm_ui)

@@ -25,10 +25,14 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       1×/2×), `TextRenderer` / `BitmapTextRenderer` / `SystemFontTextRenderer`, MainWindow
       uses it, `tst_bitmaptext` proves the font database stays unpopulated.
       xcb: startup 164 → 44 ms, private 12.0 → 2.5 MiB
-- [ ] `src/sensors/`: `qkrellm_sensors` target; `/proc/stat` parser + fixtures (≥ 2 kernels) + fuzzer
+- [x] `src/sensors/`: `qkrellm_sensors` target (no Qt); `/proc/stat` parser, CPU usage
+      deltas, `ProcFile` reader; fixtures `linux-6.18-x86_64-20cpu` (two snapshots 1 s apart);
+      older column layouts (2.4 → 2.6.33) covered by edge-case tests; fuzzers for procstat
+      and textatlas; `scripts/fuzz.sh`; CI fuzz job (60 s each)
+- [ ] Second real kernel fixture for /proc/stat (needs another machine/kernel)
 - [ ] `core`: `RingBuffer`, `Sampler` (single coarse timer), `MetricRegistry`
 - [ ] `ui`: `ChartWidget`, `Panel`; CPU panel visible in MainWindow
-- [ ] Budget still met (`measure.sh --check`); CI runs the fuzzer for 60 s
+- [ ] Budget still met (`measure.sh --check`)
 
 ## M2 — Built-in monitors
 
@@ -63,7 +67,9 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## Next steps
 
-1. `/proc/stat` vertical slice with the `new-monitor` skill: `qkrellm_sensors` target,
-   pure parser + fixtures (≥ 2 kernel tags) + fuzzer, then `RingBuffer`/`Sampler` in core
-   and a `ChartWidget`/`Panel` in ui. Panel text must use `TextRenderer` (ADR 0011).
-2. Open question carried over: CI must run the fuzzer for 60 s once the first one exists.
+1. `core`: `RingBuffer`, `Sampler` (single coarse QTimer), `MetricRegistry`; wire a CPU
+   monitor using `qkrellm_sensors` (`ProcFile("/proc/stat")` + `parseProcStat` +
+   `computeUsage`). No allocation per tick.
+2. `ui`: `ChartWidget` + `Panel` with text via `TextRenderer`; show the CPU panel.
+3. Ask the maintainer for a `/proc/stat` capture from another kernel/machine
+   (`tests/fixtures/capture.sh <tag> /proc/stat`) to satisfy the "≥ 2 kernels" rule.

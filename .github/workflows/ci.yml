@@ -67,6 +67,23 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           scripts/lint.sh
 
+  fuzz:
+    name: fuzz parsers (60 s each)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+      - uses: actions/checkout@v4
+      - name: Fuzz
+        run: scripts/fuzz.sh 60
+      - name: Upload crashes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: /tmp/qkrellm/fuzz/crashes/
+
   budget:
     name: resource budget (release)
     runs-on: ubuntu-latest

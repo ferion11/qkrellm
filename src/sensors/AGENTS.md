@@ -1,6 +1,8 @@
 # src/sensors — kernel data parsers and readers
 
-(Empty until M1.) Rules for code that will live here (ADR 0005):
+Contents (ADR 0005): `textscan` (shared allocation-free tokenizing), `procstat` (parser of
+/proc/stat), `cpuusage` (deltas between samples), `ProcFile` (the only I/O: open once,
+`pread`). Library `qkrellm_sensors` links **no Qt**. Rules:
 
 ## Split parsing from I/O
 
@@ -28,6 +30,7 @@
    `tests/fixtures/proc/<tag>/…` (byte-exact; `.gitattributes` keeps them untouched).
 3. Unit test in `tests/unit/tst_<parser>.cpp` covering every fixture tag plus hand-made
    edge cases (empty, truncated, garbage, huge numbers).
-4. Fuzzer `tests/fuzz/fuzz_<parser>.cpp` (see `tests/fuzz/CMakeLists.txt`).
+4. Fuzzer `tests/fuzz/fuzz_<parser>.cpp`, registered in `tests/fuzz/CMakeLists.txt` and
+   `scripts/fuzz.sh` (CI fuzzes every parser for 60 s).
 
 The `linux-sensors` agent and the `new-monitor` skill follow this recipe.

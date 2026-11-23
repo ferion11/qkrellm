@@ -16,15 +16,15 @@ Dependencies point **down only**. A layer never includes headers from a layer ab
     │
  src/core/        Sampler (one coarse QTimer), MetricRegistry, RingBuffer,   (QtCore only)
     │             Config (QSettings), version
- src/sensors/     pure parsers (string_view -> struct) + thin Linux readers  (no Qt in parsers) [M1]
+ src/sensors/     pure parsers (string_view -> struct) + ProcFile reader     (no Qt at all)
 
  include/qkrellm/ public plugin ABI (C11) + plugin.hpp — depends on nothing
  plugins/         example plugins, built only against include/qkrellm
 ```
 
-CMake targets mirror this: `qkrellm_core` (links Qt6::Core only), `qkrellm_ui` (adds
-Gui/Widgets), `qkrellm` executable. `qkrellm_sensors` and `qkrellm_pluginhost` appear in
-M1 and M4.
+CMake targets mirror this: `qkrellm_sensors` (no Qt), `qkrellm_core` (Qt6::Core +
+sensors), `qkrellm_ui` (adds Gui/Widgets), `qkrellm` executable. `qkrellm_pluginhost`
+appears in M4.
 
 ## Data flow (target design, M1+)
 

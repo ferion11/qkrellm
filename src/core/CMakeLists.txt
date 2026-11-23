@@ -8,5 +8,5 @@ target_include_directories(qkrellm_core
     PUBLIC
         "${PROJECT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(qkrellm_core PUBLIC Qt6::Core)
+target_link_libraries(qkrellm_core PUBLIC Qt6::Core qkrellm_sensors)
 qk_set_warnings(qkrellm_core)

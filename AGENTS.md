@@ -23,6 +23,7 @@ scripts/lint.sh                        # clang-format check, clang-tidy, clazy, 
 scripts/lint.sh fix                    # apply clang-format
 benchmarks/measure.sh --check          # resource budget (needs release build)
 scripts/coverage.sh                    # -> /tmp/qkrellm/coverage/index.html
+scripts/fuzz.sh [seconds]              # every parser fuzzer (default 60 s each)
 ctest --preset dev -R abi              # run a subset
 ```
 
