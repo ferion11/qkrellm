@@ -3,12 +3,12 @@
 # Regenerates the committed glyph atlases in src/ui/fonts/ (ADR 0011).
 # Output depends on the FreeType/Qt version, so atlases are committed, not built.
 #
-#   tools/glyphgen/regenerate.sh [font.ttf]     (default: system DejaVu Sans)
+#   tools/glyphgen/regenerate.sh [font.ttf]     (default: system DejaVu Sans Condensed)
 set -euo pipefail
 repo=$(cd "$(dirname "$0")/../.." && pwd)
 out=${QKRELLM_OUT:-/tmp/qkrellm}
-font=${1:-/usr/share/fonts/dejavu/DejaVuSans.ttf}
-size=${QK_ATLAS_PIXEL_SIZE:-11}
+font=${1:-/usr/share/fonts/dejavu/DejaVuSansCondensed.ttf}
+size=${QK_ATLAS_PIXEL_SIZE:-9} # fits the 70 px default panel (Theme::panelWidth)
 
 cd "$repo"
 cmake --preset dev >/dev/null

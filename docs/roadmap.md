@@ -48,6 +48,8 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       (levels pushed at construction), "Mem" panel (used + cache) and "Swap" panel (only
       when swap exists at startup); `formatBytes` ("3.2G") and `ValueFormat` in panel headers;
       fixtures `linux-6.18-x86_64-20cpu` (no swap) and `…-20cpu-swap` (2 GiB swap file)
+- [x] Default width 70 px (maintainer's GKrellM width); atlases DejaVu Sans Condensed 9 px;
+      bytes header falls back to "used" when "used/total" does not fit
 - [ ] Network (`/proc/net/dev`), per-interface
 - [ ] Disk I/O (`/proc/diskstats`)
 - [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)

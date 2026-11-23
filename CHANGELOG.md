@@ -7,6 +7,11 @@ All notable changes to this project are documented here. Format:
 
 ## [Unreleased]
 
+### Changed
+- Default panel width 120 → 70 px (as commonly used with GKrellM); panel text atlases are
+  now DejaVu Sans Condensed 9 px (was DejaVu Sans 11 px). A bytes header that does not fit
+  ("7.1G/62G") falls back to the used value alone.
+
 ### Added
 - Engineering foundation (M0): CMake presets with all outputs in `/tmp/qkrellm`, hello
   window with `--exit-after-first-paint`, Qt Test/ABI/smoke tests, lint stack, resource

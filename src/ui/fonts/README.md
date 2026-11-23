@@ -4,7 +4,7 @@ Panel text is drawn from these pre-rendered atlases instead of system fonts (ADR
 
 | File | What |
 |---|---|
-| `default.png`, `default.qkatlas` | DejaVu Sans 11 px, scale 1 |
+| `default.png`, `default.qkatlas` | DejaVu Sans Condensed 9 px, scale 1 (fits the 70 px default panel) |
 | `default@2x.png`, `default@2x.qkatlas` | same at scale 2 (HiDPI) |
 | `LICENSE.DejaVu` | licence of the DejaVu fonts the atlases are rendered from |
 
@@ -13,5 +13,5 @@ Panel text is drawn from these pre-rendered atlases instead of system fonts (ADR
 - Regenerate with `tools/glyphgen/regenerate.sh [font.ttf]` (outputs depend on the
   FreeType/Qt version, which is why they are committed instead of built). The `.qkatlas`
   header records the source font's SHA-256 and the Qt version used.
-- Source font: DejaVu Sans 2.37 (`DejaVuSans.ttf`), Bitstream Vera licence with
+- Source font: DejaVu Sans Condensed 2.37 (`DejaVuSansCondensed.ttf`), Bitstream Vera licence with
   public-domain DejaVu changes; see `LICENSE.DejaVu`.

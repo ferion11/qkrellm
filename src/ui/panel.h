@@ -19,7 +19,7 @@ class TextRenderer;
 /// How the header value (right side) is written.
 enum class ValueFormat : std::uint8_t {
     Percent, ///< Fraction metric -> "nn%"
-    Bytes,   ///< Bytes metric -> "3.2G", or "3.2G/62G" with PanelSpec::totalMetric
+    Bytes,   ///< Bytes metric -> "3.2G", or "3.2G/62G" with PanelSpec::totalMetric when it fits
 };
 
 // The `{}` initializers keep GCC's -Wmissing-field-initializers quiet for designated

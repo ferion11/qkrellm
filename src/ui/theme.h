@@ -17,9 +17,9 @@ struct Theme
     QColor seriesPrimary{0x4f, 0xb3, 0xff};   ///< e.g. CPU user
     QColor seriesSecondary{0xff, 0x8a, 0x3d}; ///< e.g. CPU system, swap used
     QColor seriesMuted{0x3a, 0x5a, 0x78};     ///< e.g. memory cache (reclaimable)
-    int panelWidth = 120;                     ///< logical px (history may be longer)
-    int chartHeight = 36;                     ///< logical px
-    int panelPadding = 2;                     ///< logical px around header text
+    int panelWidth = 70;  ///< logical px (history may be longer); GKrellM-like narrow default
+    int chartHeight = 36; ///< logical px
+    int panelPadding = 2; ///< logical px around header text
 };
 
 } // namespace qk::ui

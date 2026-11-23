@@ -101,18 +101,70 @@ private slots:
         QCOMPARE(text(formatBytesOf(b, std::nullopt, 1024.0)), QStringLiteral("--/1.0K"));
     }
 
-    void widestHeaderFitsPanel()
+    void headersFitDefaultPanel()
     {
-        // Longest label + longest "used/total" value must fit side by side (with a gap)
-        // in the default panel width, at both atlas scales.
+        // In the default (narrow) width, at both atlas scales:
+        //  - every label fits next to its worst-case short value ("100%", "999M"), and
+        //  - the usual memory header "Mem" + "7.1G/62G" still fits in full.
         for (const qreal dpr : {1.0, 2.0}) {
             const auto r = BitmapTextRenderer::load(QStringLiteral(":/qkrellm/fonts/default"), dpr);
             QVERIFY(r);
             const Theme theme;
-            const int used = r->horizontalAdvance(u"Swap") + r->horizontalAdvance(u"1000M/1000M") +
-                             (3 * theme.panelPadding);
-            QVERIFY2(used <= theme.panelWidth, qPrintable(QString::number(used)));
+            const auto fits = [&](QStringView label, QStringView value) {
+                const int used = r->horizontalAdvance(label) + r->horizontalAdvance(value) +
+                                 (3 * theme.panelPadding);
+                return used <= theme.panelWidth;
+            };
+            QVERIFY(fits(u"CPU", u"100%"));
+            QVERIFY(fits(u"Swap", u"999M"));
+            QVERIFY(fits(u"Mem", u"7.1G/62G"));
         }
+    }
+
+    void bytesHeaderFallsBackToUsedWhenNarrow()
+    {
+        MetricRegistry registry(8);
+        const auto used = registry.add({.id = "u", .label = "U", .unit = MetricUnit::Bytes});
+        const auto total = registry.add({.id = "t", .label = "T", .unit = MetricUnit::Bytes});
+        registry.push(used, 999.0F * 1024 * 1024);
+        registry.push(total, 1000.0F * 1024 * 1024 * 1024);
+        const auto r = BitmapTextRenderer::load(QStringLiteral(":/qkrellm/fonts/default"), 1.0);
+        QVERIFY(r);
+        const Theme theme;
+        const auto render = [&](int width) {
+            qk::ui::Panel panel(registry,
+                                {
+                                    .label = QStringLiteral("Swap"),
+                                    .valueMetric = used,
+                                    .valueFormat = qk::ui::ValueFormat::Bytes,
+                                    .totalMetric = total,
+                                },
+                                *r, theme);
+            panel.resize(width, panel.sizeHint().height());
+            return panel.grab().toImage();
+        };
+        // Leftmost lit column of the value text, scanning from the right edge inwards
+        // until a gap wider than a space separates value from label.
+        const auto valueLeft = [&](const QImage& image) {
+            int left = image.width();
+            int gap = 0;
+            for (int x = image.width() - 1; x >= 0 && gap < 6; --x) {
+                bool lit = false;
+                for (int y = 0; y < image.height() && !lit; ++y) {
+                    lit = image.pixelColor(x, y).lightness() > 128;
+                }
+                gap = lit ? 0 : gap + 1;
+                left = lit ? x : left;
+            }
+            return left;
+        };
+        const int wide = 200;
+        const QImage full = render(wide);
+        const QImage narrow = render(theme.panelWidth);
+        // Wide: the whole "999M/1.0T" is drawn; narrow: only "999M".
+        QVERIFY(wide - valueLeft(full) > r->horizontalAdvance(u"999M/") + theme.panelPadding);
+        QVERIFY(theme.panelWidth - valueLeft(narrow) <=
+                r->horizontalAdvance(u"999M") + theme.panelPadding);
     }
 
     void chartStacksSeriesNewestAtRight()

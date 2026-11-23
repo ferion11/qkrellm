@@ -74,6 +74,11 @@ void Panel::paintEvent(QPaintEvent* /*event*/)
     case ValueFormat::Bytes:
         if (m_totalMetric) {
             value = formatBytesOf(buffer, latest(m_valueMetric), latest(m_totalMetric));
+            // Narrow panel: "used/total" would collide with the label -> just "used".
+            const int room = width() - (3 * pad) - m_text->horizontalAdvance(m_label);
+            if (m_text->horizontalAdvance(value) > room) {
+                value = formatBytes(buffer, latest(m_valueMetric));
+            }
         } else {
             value = formatBytes(buffer, latest(m_valueMetric));
         }
