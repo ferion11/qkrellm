@@ -1,6 +1,6 @@
 # 0012 — Autoscale rate charts to a power-of-two ceiling
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-23
 - **Deciders:** maintainer + agent session
 

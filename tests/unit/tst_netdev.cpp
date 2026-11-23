@@ -71,6 +71,26 @@ private slots:
         QVERIFY(!dev->find("eth1"));
     }
 
+    void parsesSecondMachineFixture()
+    {
+        // Maintainer's Manjaro laptop: a 6-character name fills the name field, so the
+        // line starts directly with "enp2s0:" (no left padding).
+        QFile f(QStringLiteral(QK_FIXTURES_DIR "/proc/linux-6.18.18-manjaro-28cpu/proc/net/dev"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const QByteArray text = f.readAll();
+        const auto dev = parse(view(text));
+        QVERIFY(dev);
+        QCOMPARE(dev->count, std::size_t{3});
+        QCOMPARE(dev->interfaces[1].name(), std::string_view("enp2s0"));
+        QCOMPARE(dev->interfaces[1].rxBytes, 0U);
+        const auto& wlp = dev->interfaces[2];
+        QCOMPARE(wlp.name(), std::string_view("wlp1s0"));
+        QCOMPARE(wlp.rxBytes, 517044383U);
+        QCOMPARE(wlp.rxPackets, 478740U);
+        QCOMPARE(wlp.txBytes, 19745375U);
+        QCOMPARE(wlp.txPackets, 88968U);
+    }
+
     void ratesBetweenRealSnapshots()
     {
         const auto a = parse(view(fixture("dev")));

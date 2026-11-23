@@ -53,8 +53,8 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 - [x] Network (`/proc/net/dev`), per-interface: `sensors/netdev` (+ fuzzer; it found NUL
       bytes in names), `NetMonitor` (device-backed interfaces chosen at startup, rates from
       the monotonic clock, counter resets → 0), rx + tx stacked charts with power-of-two
-      autoscale and scale label (ADR 0012, Proposed); long labels clipped before the value.
-      Only one machine's fixture so far — add a second (`net/dev`) when available
+      autoscale and scale label (ADR 0012); long labels clipped before the value; fixtures
+      from two machines (`linux-6.18-x86_64-20cpu`, `linux-6.18.18-manjaro-28cpu`)
 - [ ] Disk I/O (`/proc/diskstats`)
 - [ ] hwmon temperatures/fans/voltages (`/sys/class/hwmon`)
 - [ ] Battery (`/sys/class/power_supply`)
@@ -89,7 +89,6 @@ machines, pure parser, fuzzer, allocation-free sampling in `tst_sampling`, a pan
 
 1. Disk I/O (`/proc/diskstats`): read/write bytes per second per whole disk (skip
    partitions, loop/ram devices), reusing `counterRate` and ChartScale::Auto (ADR 0012).
-2. Pending fixtures: a second machine's `/proc/net/dev` (maintainer's Manjaro box).
-Open questions: ADR 0012 still Proposed (maintainer to accept); interfaces that appear
+Open questions: interfaces that appear
 after startup (USB tethering, VPN) are not shown — revisit with M3 config; per-CPU charts
 as a config option in M3; swap panel when swap is enabled after startup.
