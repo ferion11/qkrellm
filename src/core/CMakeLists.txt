@@ -3,7 +3,16 @@
 configure_file(version.h.in "${CMAKE_CURRENT_BINARY_DIR}/generated/qkrellm/core/version.h" @ONLY)
 
 add_library(qkrellm_core STATIC
-    version.cpp)
+    metricregistry.cpp
+    metricregistry.h
+    monitor.h
+    monitors/cpumonitor.cpp
+    monitors/cpumonitor.h
+    ringbuffer.h
+    sampler.cpp
+    sampler.h
+    version.cpp
+    version.h)
 target_include_directories(qkrellm_core
     PUBLIC
         "${PROJECT_SOURCE_DIR}/src"

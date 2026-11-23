@@ -34,3 +34,11 @@ qk_add_unit_test(tst_procstat
 qk_add_unit_test(tst_procfile
     SOURCES tst_procfile.cpp
     LIBS qkrellm_sensors Qt6::Core)
+
+qk_add_unit_test(tst_ringbuffer
+    SOURCES tst_ringbuffer.cpp
+    LIBS qkrellm_core)
+
+qk_add_unit_test(tst_sampling
+    SOURCES tst_sampling.cpp
+    LIBS qkrellm_core)

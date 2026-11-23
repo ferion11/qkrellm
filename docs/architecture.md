@@ -26,21 +26,23 @@ CMake targets mirror this: `qkrellm_sensors` (no Qt), `qkrellm_core` (Qt6::Core 
 sensors), `qkrellm_ui` (adds Gui/Widgets), `qkrellm` executable. `qkrellm_pluginhost`
 appears in M4.
 
-## Data flow (target design, M1+)
+## Data flow (implemented in M1: `core/sampler`, `core/monitors/cpumonitor`)
 
 ```
 QTimer (CoarseTimer, default 1 Hz)
   └─> Sampler::tick()
-        ├─> each Monitor reads its fds with pread() into a preallocated buffer
-        ├─> pure parser -> sample struct
-        ├─> delta/rate computation -> RingBuffer<float, N> per metric (no allocation)
-        └─> emits changed(metricId) only when a value changed
-              └─> Panel::update(dirtyRect)  (no full-window repaints)
+        ├─> each due Monitor::sample() (period = N base ticks)
+        │     ├─> ProcFile::read(): pread() into a buffer sized once
+        │     ├─> pure parser -> sample struct
+        │     └─> delta/rate -> MetricRegistry::push(handle, value) -> RingBuffer<float>
+        └─> emits sampled()
+              └─> widgets update() the regions that show changed metrics
 ```
 
 Rules that keep this cheap:
 - **No allocation in the sampling hot path.** Buffers and ring buffers are sized at
-  construction. `perf-reviewer` agent checks this.
+  construction. Enforced by `tst_sampling` (global operator-new probe over 50 real ticks)
+  and reviewed by the `perf-reviewer` agent.
 - **Files stay open.** `/proc/stat` etc. are opened once; `pread(fd, buf, n, 0)` re-reads.
 - **One timer.** Monitors declare a period that is a multiple of the base tick.
 - **Repaint only what changed**; static theme parts are cached `QPixmap`s.

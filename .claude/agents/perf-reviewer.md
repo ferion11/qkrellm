@@ -10,7 +10,8 @@ allocations in the sampling hot path.
 
 Review the diff (`git diff main...HEAD` plus unstaged `git diff`). Look for:
 
-1. **Hot-path allocations** in anything called per tick: `QString` building/`arg()`,
+1. **Hot-path allocations** in anything called per tick (`tst_sampling` probes only the CPU
+   monitor path — new monitors need the same treatment): `QString` building/`arg()`,
    `QList`/`std::vector` growth, `new`, `std::function` captures, `QVariant`, regexes,
    `QFile` open per tick (files must stay open and use `pread`), temporary `QPixmap`/`QImage`.
 2. **Painting**: full-window `update()`/`repaint()` instead of dirty rects; missing

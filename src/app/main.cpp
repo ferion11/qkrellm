@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/startupprobe.h"
+#include "core/metricregistry.h"
+#include "core/monitors/cpumonitor.h"
+#include "core/sampler.h"
 #include "core/version.h"
 #include "ui/mainwindow.h"
 
@@ -7,7 +10,15 @@
 #include <QCommandLineParser>
 #include <QTimer>
 
+#include <chrono>
 #include <cstdio>
+#include <memory>
+
+namespace {
+// Enough history for a chart a few hundred pixels wide (one sample per pixel column).
+constexpr std::size_t kHistoryLength = 256;
+constexpr std::chrono::milliseconds kSampleInterval{1000};
+} // namespace
 
 int main(int argc, char* argv[])
 {
@@ -26,7 +37,17 @@ int main(int argc, char* argv[])
     parser.addOption(exitAfterFirstPaint);
     parser.process(app);
 
-    qk::ui::MainWindow window;
+    qk::core::MetricRegistry registry(kHistoryLength);
+    qk::core::Sampler sampler(kSampleInterval);
+    auto cpu = std::make_unique<qk::core::CpuMonitor>(registry);
+    const qk::core::MetricHandle cpuBusy = cpu->busy();
+    if (!cpu->isValid()) {
+        qWarning("qkrellm: cannot read /proc/stat; CPU monitor disabled");
+    }
+    sampler.addMonitor(std::move(cpu));
+
+    qk::ui::MainWindow window(registry, cpuBusy);
+    QObject::connect(&sampler, &qk::core::Sampler::sampled, &window, qOverload<>(&QWidget::update));
 
     if (parser.isSet(exitAfterFirstPaint)) {
         QObject::connect(&window, &qk::ui::MainWindow::firstPaintDone, &app, [] {
@@ -38,5 +59,6 @@ int main(int argc, char* argv[])
     }
 
     window.show();
+    sampler.start();
     return QApplication::exec();
 }

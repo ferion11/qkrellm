@@ -22,6 +22,9 @@ All notable changes to this project are documented here. Format:
 - `qkrellm_sensors` library (no Qt): `/proc/stat` parser, CPU usage deltas, `ProcFile`
   open-once/`pread` reader; real fixtures; libFuzzer targets for the procstat and atlas
   parsers, `scripts/fuzz.sh`, CI fuzz job.
+- Core sampling: `RingBuffer`, `MetricRegistry`, `Monitor`, single-timer `Sampler`,
+  `CpuMonitor` (aggregate and per-CPU usage). The app samples once per second and shows
+  current CPU usage; a test proves steady-state sampling performs no heap allocation.
 
 ### Fixed
 - Build with Qt 6.5 (minimum): `tst_textatlas` used `QByteArray(std::string)`, which only

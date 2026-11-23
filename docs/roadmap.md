@@ -31,7 +31,10 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
       and textatlas; `scripts/fuzz.sh`; CI fuzz job (60 s each)
 - [x] Second real /proc/stat fixture: `linux-6.18.18-manjaro-28cpu` (maintainer's machine;
       same 10-column layout — older layouts stay covered by edge-case tests)
-- [ ] `core`: `RingBuffer`, `Sampler` (single coarse timer), `MetricRegistry`
+- [x] `core`: `RingBuffer`, `MetricRegistry` (handles, no alloc on push), `Monitor`,
+      `Sampler` (one coarse QTimer, per-monitor periods), `CpuMonitor` (aggregate busy/user/
+      system + per-CPU busy); app samples at 1 Hz and shows "CPU nn%";
+      `tst_sampling` proves steady-state ticks allocate nothing (operator-new probe)
 - [ ] `ui`: `ChartWidget`, `Panel`; CPU panel visible in MainWindow
 - [ ] Budget still met (`measure.sh --check`)
 
@@ -68,7 +71,8 @@ This file is the **handoff point between sessions**. Update the checkboxes and t
 
 ## Next steps
 
-1. `core`: `RingBuffer`, `Sampler` (single coarse QTimer), `MetricRegistry`; wire a CPU
-   monitor using `qkrellm_sensors` (`ProcFile("/proc/stat")` + `parseProcStat` +
-   `computeUsage`). No allocation per tick.
-2. `ui`: `ChartWidget` + `Panel` with text via `TextRenderer`; show the CPU panel.
+1. `ui`: `ChartWidget` (draws a `RingBuffer<float>` history, one column per sample, dirty-rect
+   repaints, cached background) and `Panel` (label/value text via `TextRenderer`, chart).
+   Replace the "CPU nn%" placeholder in `MainWindow` with a CPU panel (aggregate chart; per-CPU
+   charts optional/config later). Keep `measure.sh --check` green and paint allocation-free.
+2. Then close M1: budget check on xcb with the real panel, update the baseline table.
