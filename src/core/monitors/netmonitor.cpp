@@ -47,14 +47,18 @@ NetMonitor::NetMonitor(MetricRegistry& registry, const char* path, const char* s
         const sensors::NetInterface& itf = dev.interfaces.at(i);
         const std::string name(itf.name());
         const auto add = [&](const char* suffix, const std::string& label) {
-            return registry.add({.id = "net." + name + "." + suffix,
-                                 .label = label,
-                                 .unit = MetricUnit::BytesPerSecond});
+            return registry.add({
+                .id = "net." + name + "." + suffix,
+                .label = label,
+                .unit = MetricUnit::BytesPerSecond,
+            });
         };
-        m_interfaces.push_back({.name = name,
-                                .rx = add("rx", name + " rx"),
-                                .tx = add("tx", name + " tx"),
-                                .total = add("total", name)});
+        m_interfaces.push_back({
+            .name = name,
+            .rx = add("rx", name + " rx"),
+            .tx = add("tx", name + " tx"),
+            .total = add("total", name),
+        });
         m_previous.push_back({.rx = itf.rxBytes, .tx = itf.txBytes, .present = true});
     }
 }
